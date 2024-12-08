@@ -44,7 +44,7 @@ const Servers: React.FC<ServerBlockProps> = ({servers}) => {
                             <ChevronsUpDown className="opacity-50"/>
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-full p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
                         <Command>
                             <CommandInput placeholder="Search server..."/>
                             <CommandList>
