@@ -3,15 +3,15 @@ import {Card, CardHeader, CardTitle, CardContent} from "@/components/ui/card";
 import {ShieldCheck, Lock} from 'lucide-react';
 import {OpenAPIV3} from 'openapi-types';
 import AuthDialog from './AuthDialog';
-import {Button} from "@/components/ui/button"; // Nouveau import
+import {Button} from "@/components/ui/button";
 
-interface AuthBlockProps {
+interface AuthProps {
     securitySchemes: {
         [key: string]: OpenAPIV3.ReferenceObject | OpenAPIV3.SecuritySchemeObject
-    }
+    } | null;
 }
 
-const AuthBlock: React.FC<AuthBlockProps> = ({securitySchemes}) => {
+const Auth: React.FC<AuthProps> = ({securitySchemes}) => {
     return (
         <Card>
             <CardHeader>
@@ -21,16 +21,28 @@ const AuthBlock: React.FC<AuthBlockProps> = ({securitySchemes}) => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                <AuthDialog securitySchemes={securitySchemes}>
-                    <Button variant={"outline"}
-                            className="w-full p-2 border rounded-lg border-green-500 text-green-500 hover:bg-green-500 hover:text-white">
-                        <Lock className="w-5 h-5 mr-2"/>
-                        Authorize
+                {securitySchemes === null ? (
+                    <Button
+                        variant={"secondary"}
+                        className="w-full p-2 border rounded-lg cursor-not-allowed"
+                    >
+                        <Lock className="w-5 h-5 mr-2" />
+                        No authentication methods available
                     </Button>
-                </AuthDialog>
+                ) : (
+                    <AuthDialog securitySchemes={securitySchemes}>
+                        <Button
+                            variant={"outline"}
+                            className="w-full p-2 border rounded-lg border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
+                        >
+                            <Lock className="w-5 h-5 mr-2" />
+                            Authorize
+                        </Button>
+                    </AuthDialog>
+                )}
             </CardContent>
         </Card>
     );
 };
 
-export default AuthBlock;
+export default Auth;

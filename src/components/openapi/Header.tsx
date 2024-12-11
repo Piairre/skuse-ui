@@ -10,6 +10,7 @@ import {
 import {OpenAPIV3} from "openapi-types";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import Servers from "@/components/openapi/Servers";
+import Auth from "@/components/openapi/Auth/AuthButton";
 
 interface OpenAPIHeaderProps {
     document: OpenAPIV3.Document;
@@ -99,10 +100,10 @@ const Header: React.FC<OpenAPIHeaderProps> = ({document}) => {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-
-                {document.servers && (
-                    <Servers servers={document.servers}/>
-                )}
+                <div className="grid lg:grid-cols-2 gap-2">
+                    <Servers servers={document.servers ?? []}/>
+                    <Auth securitySchemes={document.components?.securitySchemes ?? null}/>
+                </div>
 
                 {info.description && (
                     <FormattedMarkdown markdown={info.description}/>
