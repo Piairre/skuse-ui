@@ -1,73 +1,107 @@
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { coldarkDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import React, {useEffect} from 'react';
+import MarkdownPreview from '@uiw/react-markdown-preview';
+import rehypeSanitize, {defaultSchema} from "rehype-sanitize";
+import rehypeExternalLinks from 'rehype-external-links'
 
 interface MarkdownRendererProps {
-    content: string;
+    markdown: string;
     maxHeight?: string;
 }
 
-export default function FormattedMarkdown({markdown, maxHeight = 'max-h-[400px]'}: MarkdownRendererProps) {
+// Polyfill for setImmediate if not available
+const setImmediate = (callback: () => void) => {
+    return setTimeout(callback, 0);
+};
+
+export const useHashLinkFix = () => {
+    useEffect(() => {
+        const hashchange = () => {
+            let hash: string | undefined;
+            try {
+                hash = decodeURIComponent(location.hash.slice(1)).toLowerCase();
+            } catch {
+                return;
+            }
+
+            const name = 'user-content-' + hash;
+            const target =
+                document.getElementById(name) ||
+                document.getElementsByName(name)[0];
+
+            if (target) {
+                setImmediate(() => {
+                    target.scrollIntoView({ behavior: 'smooth' });
+                });
+            }
+        };
+
+        // Initial hash check
+        hashchange();
+
+        // Listen for hash changes
+        window.addEventListener('hashchange', hashchange);
+
+        // Handle clicking on same hash link
+        const handleClick = (event: MouseEvent) => {
+            if (
+                event.target &&
+                event.target instanceof HTMLAnchorElement &&
+                event.target.href === location.href &&
+                location.hash.length > 1
+            ) {
+                setImmediate(() => {
+                    if (!event.defaultPrevented) {
+                        hashchange();
+                    }
+                });
+            }
+        };
+
+        document.addEventListener('click', handleClick, false);
+
+        // Cleanup listeners
+        return () => {
+            window.removeEventListener('hashchange', hashchange);
+            document.removeEventListener('click', handleClick);
+        };
+    }, []);
+};
+
+const rehypePlugins = [
+    [
+        rehypeSanitize, {
+            ...defaultSchema,
+            attributes: {
+                ...defaultSchema.attributes,
+                a: [...(defaultSchema.attributes?.a || []), 'class'],
+                svg: ['className', 'hidden', 'viewBox', 'fill', 'height', 'width', 'aria-hidden', 'version'],
+                path: ['fill-rule', 'd'],
+                div: ['className', 'class', 'data-code', ...(defaultSchema.attributes?.div || [])],
+            },
+            tagNames: [
+                ...(defaultSchema.tagNames || []), 'a', 'svg', 'path', 'div'
+            ],
+        },
+    ],
+    [
+        rehypeExternalLinks, {
+            target: '_blank',
+            rel: ['noopener', 'noreferrer']
+        }
+    ]
+];
+
+export default function FormattedMarkdown({markdown}: MarkdownRendererProps) {
+
+    useHashLinkFix();
+
     return (
-        <div className={`overflow-y-auto ${maxHeight}`}>
-            <ReactMarkdown
-                className={'prose prose-sm sm:prose-base dark:prose-invert'}
-                remarkPlugins={[remarkGfm]}
-                components={{
-                    a: ({node, ...props}) => (
-                        <a
-                            {...props}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
-                        />
-                    ),
-                    code({node, inline, className, children, ...props}) {
-                        const match = /language-(\w+)/.exec(className || '');
-                        return !inline && match ? (
-                            <SyntaxHighlighter
-                                style={coldarkDark}
-                                language={match[1]}
-                                PreTag="div"
-                            >
-                                {String(children).replace(/\n$/, '')}
-                            </SyntaxHighlighter>
-                        ) : (
-                            <code
-                                className={`${className} inline-code bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm`}
-                                {...props}
-                            >
-                                {children}
-                            </code>
-                        );
-                    },
-                    table: ({node, ...props}) => (
-                        <table
-                            className="w-full border-collapse border border-gray-300 dark:border-gray-600"
-                            {...props}
-                        />
-                    ),
-                    th: ({node, ...props}) => (
-                        <th
-                            className="border border-gray-300 dark:border-gray-600 p-2 bg-gray-100 dark:bg-gray-800"
-                            {...props}
-                        />
-                    ),
-                    td: ({node, ...props}) => (
-                        <td
-                            className="border border-gray-300 dark:border-gray-600 p-2"
-                            {...props}
-                        />
-                    ),
-                    h1: ({node, ...props}) => <h1 className="text-3xl font-bold mt-4 mb-2" {...props} />,
-                    h2: ({node, ...props}) => <h2 className="text-2xl font-semibold mt-3 mb-2 border-b pb-1" {...props} />,
-                    h3: ({node, ...props}) => <h3 className="text-xl font-semibold mt-2 mb-1" {...props} />,
-                }}
-            >
-                {markdown}
-            </ReactMarkdown>
+        <div>
+            <MarkdownPreview
+                source={markdown}
+                rehypePlugins={rehypePlugins}
+                style={{padding: 10, wordBreak: 'break-word'}}
+            />
         </div>
     );
 }
