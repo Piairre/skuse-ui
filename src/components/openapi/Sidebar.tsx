@@ -67,7 +67,7 @@ const Sidebar: React.FC<SkuseUISidebarProps> = ({groupedEndpointsByTag}) => {
 const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject, key: string }> = ({operation}) => {
     return (
         <div
-            className={`flex items-center space-x-2 p-2 hover:bg-secondary/20 cursor-pointer hover:border-l-4 hover:bg-secondary transition-all duration-200`}
+            className={`flex items-center space-x-2 p-2 hover:bg-secondary/20 cursor-pointer hover:border-l-4 transition-all duration-200`}
         >
             <Badge
                 className={`${httpMethodColors[operation.method.toLowerCase()]} text-white uppercase w-14 flex justify-center items-center`}>

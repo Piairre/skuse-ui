@@ -3,17 +3,15 @@ import {useSwaggerClient} from '@/hooks/useClient';
 import {groupEndpointsByTags} from '@/utils/openapi';
 import Header from "@/components/openapi/Header";
 import Sidebar from "@/components/openapi/Sidebar";
-import Auth from "@/components/openapi/Auth/AuthButton";
-import Servers from "@/components/openapi/Servers";
 
 interface SkuseDocumentationProps {
     openApiUrl: string;
 }
 
 export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiUrl }) => {
-    const {spec, error, isLoading} = useSwaggerClient({openApiUrl: openApiUrl});
+    const {spec, error, loading} = useSwaggerClient({openApiUrl: openApiUrl});
 
-    if (isLoading) return <div>Chargement...</div>;
+    if (loading) return <div>Chargement...</div>;
     if (error) return <div>Erreur : {error.message}</div>;
     if (!spec) return null;
 

@@ -1,13 +1,11 @@
 import React from 'react';
-import {Card, CardHeader, CardTitle, CardDescription, CardContent} from "@/components/ui/card";
+import {Card, CardHeader, CardTitle, CardContent} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
 import {
     ExternalLink,
-    BookOpenText,
     Scale,
-    Contact2,
     Mail,
-    Earth, ScrollText
+    Earth
 } from 'lucide-react';
 import {OpenAPIV3} from "openapi-types";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
