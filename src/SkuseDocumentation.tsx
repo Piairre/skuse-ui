@@ -20,15 +20,13 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
     const groupedEndpoints = groupEndpointsByTags(spec.paths);
 
     return (
-        <div className="min-h-screen bg-gray-50 flex">
-            <div className="w-70 bg-white border-r">
+        <div className="h-screen bg-gray-50 flex">
+            <div className="w-70 bg-white border-r sticky top-0 h-screen overflow-y-auto">
                 <Sidebar groupedEndpointsByTag={groupedEndpoints}/>
             </div>
-            <div className="flex-1 m-2">
-                <Header document={spec}/>
-                <div className="grid lg:grid-cols-2 gap-2 mt-2">
-                    <Servers servers={spec.servers}/>
-                    <Auth securitySchemes={spec.components.securitySchemes}/>
+            <div className="flex-1 overflow-y-auto m-2">
+                <div className="sticky top-0 bg-white">
+                    <Header document={spec}/>
                 </div>
             </div>
         </div>

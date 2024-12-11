@@ -1,26 +1,32 @@
 import { OpenAPIV3 } from 'openapi-types';
+import { EnhancedOperationObject, TaggedOperationsMap } from '@/types/openapi';
 
-export function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): Record<string, OpenAPIV3.OperationObject[]> {
-    const tagMap: Record<string, OpenAPIV3.OperationObject[]> = {};
+export function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
+    const tagMap: TaggedOperationsMap = {};
+
+    function pushToTag(tag: string | null, operation: OpenAPIV3.OperationObject, path: string, method: string) {
+        if (!tagMap[tag]) {
+            tagMap[tag] = [];
+        }
+
+        const enhancedOperation: EnhancedOperationObject = {
+            ...operation,
+            path,
+            method: method.toUpperCase() as Uppercase<OpenAPIV3.HttpMethods>
+        };
+
+        tagMap[tag].push(enhancedOperation);
+    }
 
     Object.entries(paths).forEach(([path, pathItem]) => {
         Object.entries(pathItem).forEach(([method, operation]) => {
-            const typedOperation = operation as OpenAPIV3.OperationObject;
+            if (Object.values(OpenAPIV3.HttpMethods).includes(method)) {
+                const typedOperation = operation as OpenAPIV3.OperationObject;
+                const tag = typedOperation.tags && typedOperation.tags.length > 0
+                    ? typedOperation.tags[0]
+                    : null;
 
-            if (typedOperation.tags && typedOperation.tags.length > 0) {
-                typedOperation.tags.forEach(tagName => {
-                    if (!tagMap[tagName]) {
-                        tagMap[tagName] = [];
-                    }
-
-                    const enhancedOperation = {
-                        ...typedOperation,
-                        path,
-                        method: method.toUpperCase()
-                    };
-
-                    tagMap[tagName].push(enhancedOperation);
-                });
+                pushToTag(tag, typedOperation, path, method);
             }
         });
     });
