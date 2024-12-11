@@ -1,7 +1,7 @@
 import React, {useState} from 'react';
 import {
     Dialog,
-    DialogContent,
+    DialogContent, DialogDescription,
     DialogHeader,
     DialogTitle,
     DialogTrigger
@@ -15,11 +15,13 @@ import {
 import {ShieldCheck} from 'lucide-react';
 import {OpenAPIV3} from 'openapi-types';
 import {getAuthMethodComponent, getSchemeIcon} from './AuthMethods';
+import {resolveReferences} from "@/utils/openapi";
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
 interface AuthDialogProps {
     children: React.ReactNode;
     securitySchemes: {
-        [key: string]: OpenAPIV3.ReferenceObject | OpenAPIV3.SecuritySchemeObject
+        [key: string]: OpenAPIV3.SecuritySchemeObject
     }
 }
 
@@ -33,6 +35,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
+                    <DialogDescription />
                     <DialogTitle className="flex items-center">
                         <ShieldCheck className="mr-2 h-5 w-5 text-primary"/>
                         Authentication Methods
@@ -42,15 +45,12 @@ const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {
                 <Tabs defaultValue={Object.keys(securitySchemes)[0]} className="w-full">
                     <TabsList className="grid w-full grid-cols-3">
                         {Object.entries(securitySchemes).map(([name, scheme]) => {
-                            if ('type' in scheme) {
-                                return (
-                                    <TabsTrigger key={name} value={name}>
-                                        {getSchemeIcon(scheme.type)}
-                                        {name}
-                                    </TabsTrigger>
-                                );
-                            }
-                            return null;
+                            return (
+                                <TabsTrigger key={name} value={name}>
+                                    {getSchemeIcon(scheme.type)}
+                                    {name}
+                                </TabsTrigger>
+                            );
                         })}
                     </TabsList>
 

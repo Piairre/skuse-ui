@@ -4,6 +4,8 @@ import {ShieldCheck, Lock} from 'lucide-react';
 import {OpenAPIV3} from 'openapi-types';
 import AuthDialog from './AuthDialog';
 import {Button} from "@/components/ui/button";
+import {resolveReferences} from "@/utils/openapi";
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
 interface AuthProps {
     securitySchemes: {
@@ -12,6 +14,13 @@ interface AuthProps {
 }
 
 const Auth: React.FC<AuthProps> = ({securitySchemes}) => {
+
+    let resolvedSecuritySchemes = null;
+    if (securitySchemes !== null) {
+        let spec = useOpenAPIContext().spec;
+        resolvedSecuritySchemes = resolveReferences(securitySchemes, spec);
+    }
+
     return (
         <Card>
             <CardHeader>
@@ -21,7 +30,7 @@ const Auth: React.FC<AuthProps> = ({securitySchemes}) => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {securitySchemes === null ? (
+                {resolvedSecuritySchemes === null ? (
                     <Button
                         variant={"secondary"}
                         className="w-full p-2 border rounded-lg cursor-not-allowed"
@@ -30,7 +39,7 @@ const Auth: React.FC<AuthProps> = ({securitySchemes}) => {
                         No authentication methods available
                     </Button>
                 ) : (
-                    <AuthDialog securitySchemes={securitySchemes}>
+                    <AuthDialog securitySchemes={resolvedSecuritySchemes}>
                         <Button
                             variant={"outline"}
                             className="w-full p-2 border rounded-lg border-green-500 text-green-500 hover:bg-green-500 hover:text-white"
