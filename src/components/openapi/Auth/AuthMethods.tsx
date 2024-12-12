@@ -1,93 +1,270 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {Button} from "@/components/ui/button";
+import {Input} from "@/components/ui/input";
 import {
     Key,
     Lock,
     KeyRound,
-    UserCheck
+    UserCheck,
+    ShieldCheck, ChevronsUpDown, Check
 } from 'lucide-react';
 import {OpenAPIV3} from 'openapi-types';
+import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
+import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
+import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList} from "@/components/ui/command";
+import {cn} from "@/lib/utils";
 
-interface AuthMethodProps {
-    name: string;
-    scheme: OpenAPIV3.SecuritySchemeObject;
-}
+export const BasicAuthMethod: React.FC<{
+    scheme: OpenAPIV3.HttpSecurityScheme
+}> = ({scheme}) => {
+    const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
 
-export const BasicAuthMethod: React.FC<AuthMethodProps> = () => (
-    <div className="space-y-4">
-        <div>
-            <label className="block text-sm font-medium mb-2">Username</label>
-            <input
-                type="text"
-                className="w-full p-2 border rounded"
-                placeholder="Enter username"
-            />
+    return (
+        <div className="space-y-4">
+            {scheme.description && (
+                <div className="text-sm text-muted-foreground">
+                    <FormattedMarkdown markdown={scheme.description}/>
+                </div>
+            )}
+            <div className="space-y-2">
+                <Input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="Enter username"
+                />
+            </div>
+            <div className="space-y-2">
+                <Input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Enter password"
+                />
+            </div>
+            <Button className="w-full">
+                <ShieldCheck className="mr-2 h-4 w-4"/>
+                Authenticate
+            </Button>
         </div>
-        <div>
-            <label className="block text-sm font-medium mb-2">Password</label>
-            <input
-                type="password"
-                className="w-full p-2 border rounded"
-                placeholder="Enter password"
-            />
+    );
+};
+
+export const BearerTokenMethod: React.FC<{
+    scheme: OpenAPIV3.HttpSecurityScheme
+}> = ({scheme}) => {
+    const [token, setToken] = useState('');
+
+    return (
+        <div className="space-y-4">
+            {scheme.description && (
+                <div className="text-sm text-muted-foreground">
+                    <FormattedMarkdown markdown={scheme.description}/>
+                </div>
+            )}
+            {scheme.bearerFormat && (
+                <p className="text-xs text-muted-foreground">
+                    Expected format: {scheme.bearerFormat}
+                </p>
+            )}
+            <div className="space-y-2">
+                <Input
+                    type="text"
+                    value={token}
+                    onChange={(e) => setToken(e.target.value)}
+                    placeholder="Enter bearer token"
+                />
+            </div>
+            <Button className="w-full">
+                <ShieldCheck className="mr-2 h-4 w-4"/>
+                Add Token
+            </Button>
         </div>
-        <Button className="w-full">Authenticate</Button>
-    </div>
-);
+    );
+};
 
-export const BearerTokenMethod: React.FC<AuthMethodProps> = () => (
-    <div className="space-y-4">
-        <div>
-            <label className="block text-sm font-medium mb-2">Bearer Token</label>
-            <input
-                type="text"
-                className="w-full p-2 border rounded"
-                placeholder="Enter token"
-            />
+export const ApiKeyMethod: React.FC<{
+    scheme: OpenAPIV3.ApiKeySecurityScheme
+}> = ({scheme}) => {
+    const [apiKey, setApiKey] = useState('');
+
+    return (
+        <div className="space-y-4">
+            {scheme.description && (
+                <div className="text-sm text-muted-foreground">
+                    <FormattedMarkdown markdown={scheme.description}/>
+                </div>
+            )}
+            <div className="space-y-2">
+                <Input
+                    type="text"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    placeholder={`${scheme.name} - ${scheme.in}`}
+                />
+            </div>
+            <Button className="w-full">
+                <ShieldCheck className="mr-2 h-4 w-4"/>
+                Save ${scheme.name}
+            </Button>
         </div>
-        <Button className="w-full">Add Token</Button>
-    </div>
-);
+    );
+};
 
-export const ApiKeyMethod: React.FC<AuthMethodProps> = ({scheme}) => (
-    <div className="space-y-4">
-        <div>
-            <label className="block text-sm font-medium mb-2">
-                {scheme.description || 'API Key'}
-            </label>
-            <input
-                type="text"
-                className="w-full p-2 border rounded"
-                placeholder={`Enter ${scheme.description || 'API Key'}`}
-            />
+export const OAuth2Method: React.FC<{
+    scheme: OpenAPIV3.OAuth2SecurityScheme
+}> = ({scheme}) => {
+    const [selectedFlow, setSelectedFlow] = useState<keyof OpenAPIV3.OAuth2SecurityScheme['flows'] | null>(null);
+    const [open, setOpen] = useState(false)
+
+    // Determine available flows
+    const availableFlows = Object.keys(scheme.flows || {}) as Array<keyof OpenAPIV3.OAuth2SecurityScheme['flows']>;
+
+    return (
+        <div className="space-y-4">
+            {scheme.description && (
+                <div className="text-sm text-muted-foreground">
+                    <FormattedMarkdown markdown={scheme.description}/>
+                </div>
+            )}
+
+            <div className="space-y-2">
+                <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={open}
+                            className="w-full justify-between"
+                        >
+                            {selectedFlow
+                                ? availableFlows.find((flow) => flow === selectedFlow)
+                                : "Choose Authentication Flow"}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                        <Command>
+                            <CommandInput placeholder="Search flow..."/>
+                            <CommandList>
+                                <CommandEmpty>No flow found.</CommandEmpty>
+                                <CommandGroup>
+                                    {availableFlows.map((flow) => (
+                                        <CommandItem
+                                            key={flow}
+                                            value={flow}
+                                            onSelect={(currentValue) => {
+                                                setSelectedFlow(
+                                                    currentValue === selectedFlow ? null : currentValue as keyof OpenAPIV3.OAuth2SecurityScheme['flows']
+                                                )
+                                                setOpen(false)
+                                            }}
+                                        >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    selectedFlow === flow ? "opacity-100" : "opacity-0"
+                                                )}
+                                            />
+                                            {flow}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+            </div>
+
+            {selectedFlow && (
+                <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">
+                        {scheme.flows?.[selectedFlow] && (
+                            <>
+                                {selectedFlow === 'implicit' && (
+                                    <p>Authorization URL: {scheme.flows.implicit?.authorizationUrl}</p>
+                                )}
+                                {selectedFlow === 'authorizationCode' && (
+                                    <>
+                                        <p>Authorization URL: {scheme.flows.authorizationCode?.authorizationUrl}</p>
+                                        <p>Token URL: {scheme.flows.authorizationCode?.tokenUrl}</p>
+                                    </>
+                                )}
+                                {(selectedFlow === 'password' || selectedFlow === 'clientCredentials') && (
+                                    <p>Token URL: {scheme.flows[selectedFlow]?.tokenUrl}</p>
+                                )}
+
+                                {Object.keys(scheme.flows[selectedFlow]?.scopes || {}).length > 0 && (
+                                    <div>
+                                        <p>Available Scopes:</p>
+                                        <ul className="list-disc list-inside text-xs">
+                                            {Object.entries(scheme.flows[selectedFlow]?.scopes || {}).map(([scope, description]) => (
+                                                <li key={scope}>{scope}: {description}</li>
+                                            ))}
+                                        </ul>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                    <Button className="w-full">
+                        <ShieldCheck className="mr-2 h-4 w-4"/>
+                        Authorize with {selectedFlow}
+                    </Button>
+                </div>
+            )}
         </div>
-        <Button className="w-full">Save API Key</Button>
-    </div>
-);
+    );
+};
 
-export const OAuth2Method: React.FC<AuthMethodProps> = ({scheme}) => (
-    <div className="space-y-4">
-        {scheme.description}
-        <Button className="w-full">
-            Authorize with OAuth2
-        </Button>
-    </div>
-);
+export const OpenIDMethod: React.FC<{
+    scheme: OpenAPIV3.OpenIdSecurityScheme
+}> = ({scheme}) => {
+    return (
+        <div className="space-y-4">
+            {scheme.description && (
+                <div className="text-sm text-muted-foreground">
+                    <FormattedMarkdown markdown={scheme.description}/>
+                </div>
+            )}
+            <div className="space-y-2">
+                <span className="text-sm text-muted-foreground">OpenID Connect URL</span>
+                <Input
+                    value={scheme.openIdConnectUrl}
+                    readOnly
+                    className="cursor-not-allowed"
+                />
+            </div>
+            <Button className="w-full">
+                <ShieldCheck className="mr-2 h-4 w-4"/>
+                Connect to OpenID
+            </Button>
+        </div>
+    );
+};
 
-export const getAuthMethodComponent = (scheme: OpenAPIV3.SecuritySchemeObject) => {
+export const getAuthMethodComponent = (
+    scheme: OpenAPIV3.SecuritySchemeObject
+): React.FC<{ scheme: OpenAPIV3.SecuritySchemeObject }> => {
     switch (scheme.type) {
         case 'http':
-            if (scheme.scheme === 'basic') return BasicAuthMethod;
-            if (scheme.scheme === 'bearer') return BearerTokenMethod;
+            if ((scheme as OpenAPIV3.HttpSecurityScheme).scheme === 'basic')
+                return BasicAuthMethod;
+            if ((scheme as OpenAPIV3.HttpSecurityScheme).scheme === 'bearer')
+                return BearerTokenMethod;
             break;
         case 'apiKey':
             return ApiKeyMethod;
         case 'oauth2':
             return OAuth2Method;
+        case 'openIdConnect':
+            return OpenIDMethod;
         default:
             return () => <div>Unsupported authentication method</div>;
     }
 };
+
 
 export const getSchemeIcon = (type: string) => {
     switch (type) {
@@ -97,6 +274,8 @@ export const getSchemeIcon = (type: string) => {
             return <Key className="w-5 h-5 mr-2"/>;
         case 'oauth2':
             return <Lock className="w-5 h-5 mr-2"/>;
+        case 'openIdConnect':
+            return <ShieldCheck className="w-5 h-5 mr-2"/>;
         default:
             return <KeyRound className="w-5 h-5 mr-2"/>;
     }

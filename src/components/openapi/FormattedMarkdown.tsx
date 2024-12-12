@@ -30,7 +30,7 @@ export const useHashLinkFix = () => {
 
             if (target) {
                 setImmediate(() => {
-                    target.scrollIntoView({ behavior: 'smooth' });
+                    target.scrollIntoView({behavior: 'smooth'});
                 });
             }
         };
@@ -67,30 +67,6 @@ export const useHashLinkFix = () => {
     }, []);
 };
 
-const rehypePlugins = [
-    [
-        rehypeSanitize, {
-            ...defaultSchema,
-            attributes: {
-                ...defaultSchema.attributes,
-                a: [...(defaultSchema.attributes?.a || []), 'class'],
-                svg: ['className', 'hidden', 'viewBox', 'fill', 'height', 'width', 'aria-hidden', 'version'],
-                path: ['fill-rule', 'd'],
-                div: ['className', 'class', 'data-code', ...(defaultSchema.attributes?.div || [])],
-            },
-            tagNames: [
-                ...(defaultSchema.tagNames || []), 'a', 'svg', 'path', 'div'
-            ],
-        },
-    ],
-    [
-        rehypeExternalLinks, {
-            target: '_blank',
-            rel: ['noopener', 'noreferrer']
-        }
-    ]
-];
-
 export default function FormattedMarkdown({markdown}: MarkdownRendererProps) {
 
     useHashLinkFix();
@@ -99,7 +75,29 @@ export default function FormattedMarkdown({markdown}: MarkdownRendererProps) {
         <div>
             <MarkdownPreview
                 source={markdown}
-                rehypePlugins={rehypePlugins}
+                rehypePlugins={[
+                    [
+                        rehypeSanitize, {
+                        ...defaultSchema,
+                        attributes: {
+                            ...defaultSchema.attributes,
+                            a: [...(defaultSchema.attributes?.a || []), 'class'],
+                            svg: ['className', 'hidden', 'viewBox', 'fill', 'height', 'width', 'aria-hidden', 'version'],
+                            path: ['fill-rule', 'd'],
+                            div: ['className', 'class', 'data-code', ...(defaultSchema.attributes?.div || [])],
+                        },
+                        tagNames: [
+                            ...(defaultSchema.tagNames || []), 'a', 'svg', 'path', 'div'
+                        ],
+                    },
+                    ],
+                    [
+                        rehypeExternalLinks, {
+                            target: '_blank',
+                            rel: ['noopener', 'noreferrer']
+                        }
+                    ]
+                ]}
                 style={{padding: 10, wordBreak: 'break-word'}}
             />
         </div>

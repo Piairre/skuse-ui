@@ -35,7 +35,6 @@ const Auth: React.FC<AuthProps> = ({securitySchemes}) => {
                         variant={"secondary"}
                         className="w-full p-2 border rounded-lg cursor-not-allowed"
                     >
-                        <Lock className="w-5 h-5 mr-2" />
                         No authentication methods available
                     </Button>
                 ) : (

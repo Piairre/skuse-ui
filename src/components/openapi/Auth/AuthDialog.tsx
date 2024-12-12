@@ -15,8 +15,6 @@ import {
 import {ShieldCheck} from 'lucide-react';
 import {OpenAPIV3} from 'openapi-types';
 import {getAuthMethodComponent, getSchemeIcon} from './AuthMethods';
-import {resolveReferences} from "@/utils/openapi";
-import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
 interface AuthDialogProps {
     children: React.ReactNode;
@@ -35,7 +33,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {
             </DialogTrigger>
             <DialogContent className="sm:max-w-[500px]">
                 <DialogHeader>
-                    <DialogDescription />
+                    <DialogDescription/>
                     <DialogTitle className="flex items-center">
                         <ShieldCheck className="mr-2 h-5 w-5 text-primary"/>
                         Authentication Methods
@@ -43,7 +41,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {
                 </DialogHeader>
 
                 <Tabs defaultValue={Object.keys(securitySchemes)[0]} className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
+                    <TabsList className="grid w-full grid-cols-[repeat(auto-fit,minmax(0,1fr))]">
                         {Object.entries(securitySchemes).map(([name, scheme]) => {
                             return (
                                 <TabsTrigger key={name} value={name}>
@@ -55,15 +53,13 @@ const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {
                     </TabsList>
 
                     {Object.entries(securitySchemes).map(([name, scheme]) => {
-                        if ('type' in scheme) {
-                            const AuthMethodComponent = getAuthMethodComponent(scheme);
-                            return (
-                                <TabsContent key={name} value={name}>
-                                    <AuthMethodComponent name={name} scheme={scheme}/>
-                                </TabsContent>
-                            );
-                        }
-                        return null;
+                        console.log(scheme);
+                        const AuthMethodComponent = getAuthMethodComponent(scheme);
+                        return (
+                            <TabsContent className="max-h-80 overflow-y-auto" key={name} value={name}>
+                                <AuthMethodComponent scheme={scheme}/>
+                            </TabsContent>
+                        );
                     })}
                 </Tabs>
             </DialogContent>

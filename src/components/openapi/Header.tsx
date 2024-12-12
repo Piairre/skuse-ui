@@ -42,56 +42,61 @@ const Header: React.FC<OpenAPIHeaderProps> = ({document}) => {
                         </Badge>
                     </div>
 
-                    <div className="flex">
-                        {info.contact?.email && (
-                            <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                <a href={`mailto:${info.contact.email}`}
-                                   className="flex items-center hover:underline">
-                                    <Mail className="w-4 h-4 me-2 text-primary"/>
-                                    {info.contact.email}
-                                </a>
-                            </Badge>
-                        )}
+                    <div>
+                        <div className="flex">
+                            {info.contact?.email && (
+                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
+                                    <a href={`mailto:${info.contact.email}`}
+                                       className="flex items-center hover:underline">
+                                        <Mail className="w-4 h-4 me-2 text-primary"/>
+                                        {info.contact.email}
+                                    </a>
+                                </Badge>
+                            )}
 
-                        {info.contact?.url && (
-                            <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                <a href={info.contact.url} target="_blank" rel="noopener noreferrer"
-                                   className="flex items-center hover:underline">
-                                    <Earth className="w-4 h-4 me-2 text-primary"/>
-                                    {info.contact.url}
-                                </a>
-                            </Badge>
-                        )}
+                            {info.contact?.url && (
+                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
+                                    <a href={info.contact.url} target="_blank" rel="noopener noreferrer"
+                                       className="flex items-center hover:underline">
+                                        <Earth className="w-4 h-4 me-2 text-primary"/>
+                                        {info.contact.url}
+                                    </a>
+                                </Badge>
+                            )}
 
-                        {info.license && (
-                            <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                <a href={info.license.url} target="_blank" rel="noopener noreferrer"
-                                   className="flex items-center hover:underline">
-                                    <Scale className="w-4 h-4 me-2 text-primary"/>
-                                    {info.license.name}
-                                </a>
-                            </Badge>
-                        )}
+                            {document.externalDocs && (
+                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
+                                    <a href={document.externalDocs.url} target="_blank" rel="noopener noreferrer"
+                                       className="flex items-center hover:underline">
+                                        <ExternalLink className="w-4 h-4 me-2 text-primary"/>
+                                        {document.externalDocs.description || 'Documentation'}
+                                    </a>
+                                </Badge>
+                            )}
+                        </div>
 
-                        {info.termsOfService && (
-                            <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                <a href={info.termsOfService} target="_blank" rel="noopener noreferrer"
-                                   className="flex items-center hover:underline">
-                                    <ExternalLink className="w-4 h-4 me-2 text-primary"/>
-                                    Terms of Service
-                                </a>
-                            </Badge>
-                        )}
+                        <div className="flex justify-end">
+                            {info.license && (
+                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2 mt-1">
+                                    <a href={info.license.url} target="_blank" rel="noopener noreferrer"
+                                       className="flex items-center hover:underline">
+                                        <Scale className="w-4 h-4 me-2 text-primary"/>
+                                        {info.license.name}
+                                    </a>
+                                </Badge>
+                            )}
 
-                        {document.externalDocs && (
-                            <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                <a href={document.externalDocs.url} target="_blank" rel="noopener noreferrer"
-                                   className="flex items-center hover:underline">
-                                    <ExternalLink className="w-4 h-4 me-2 text-primary"/>
-                                    {document.externalDocs.description || 'Documentation'}
-                                </a>
-                            </Badge>
-                        )}
+                            {info.termsOfService && (
+                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2 mt-1">
+                                    <a href={info.termsOfService} target="_blank" rel="noopener noreferrer"
+                                       className="flex items-center hover:underline">
+                                        <ExternalLink className="w-4 h-4 me-2 text-primary"/>
+                                        Terms of Service
+                                    </a>
+                                </Badge>
+                            )}
+                        </div>
+
                     </div>
                 </div>
 
