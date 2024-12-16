@@ -1,5 +1,5 @@
 import React from 'react';
-import {useSwaggerClient} from '@/hooks/useClient';
+import {useSpec} from '@/hooks/useSpec';
 import {groupEndpointsByTags} from '@/utils/openapi';
 import Header from "@/components/openapi/Header";
 import Sidebar from "@/components/openapi/Sidebar";
@@ -9,7 +9,7 @@ interface SkuseDocumentationProps {
 }
 
 export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiUrl }) => {
-    const {spec, error, loading} = useSwaggerClient({openApiUrl: openApiUrl});
+    const {spec, error, loading} = useSpec({openApiUrl: openApiUrl});
 
     if (loading) return <div>Chargement...</div>;
     if (error) return <div>Erreur : {error.message}</div>;

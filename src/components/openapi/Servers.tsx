@@ -38,42 +38,53 @@ const Servers: React.FC<ServerBlockProps> = ({servers}) => {
             <CardContent>
                 <Popover open={openServerPopover} onOpenChange={setOpenServerPopover}>
                     <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" aria-expanded={openServerPopover}
-                                className="w-full justify-between">
-                            {selectedServer ? selectedServer.url : "Select a server"}
-                            <ChevronsUpDown className="opacity-50"/>
-                        </Button>
+                        {selectedServer ? (
+                            <Button variant="outline" role="combobox" aria-expanded={openServerPopover}
+                                    className="w-full justify-between">
+                                {selectedServer.url}
+                                <ChevronsUpDown className="opacity-50"/>
+                            </Button>
+                        ) : (
+                            <Button variant="secondary" className="w-full p-2 border rounded-lg cursor-not-allowed">
+                                No servers available
+                            </Button>
+                        )}
                     </PopoverTrigger>
-                    <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
-                        <Command>
-                            <CommandInput placeholder="Search server..."/>
-                            <CommandList>
-                                <CommandEmpty>No server found</CommandEmpty>
-                                <CommandGroup>
-                                    {servers.map((server) => (
-                                        <CommandItem key={server.url} value={server.url} onSelect={() => {
-                                            setSelectedServer(server);
-                                        }}>
-                                            <Check
-                                                className={cn("mr-2 h-4 w-4", selectedServer?.url === server.url ? "opacity-100" : "opacity-0")}/>
-                                            <div>
-                                                <p>{server.url}</p>
-                                                {server.description && (
-                                                    <p className="text-xs text-muted-foreground">
-                                                        {server.description}
-                                                    </p>
-                                                )}
-                                            </div>
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
+
+                    {selectedServer && (
+                        <PopoverContent
+                            className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
+                            <Command>
+                                <CommandInput placeholder="Search server..."/>
+                                <CommandList>
+                                    <CommandEmpty>No server found</CommandEmpty>
+                                    <CommandGroup>
+                                        {servers.map((server) => (
+                                            <CommandItem key={server.url} value={server.url} onSelect={() => {
+                                                setSelectedServer(server);
+                                            }}>
+                                                <Check
+                                                    className={cn("mr-2 h-4 w-4", selectedServer?.url === server.url ? "opacity-100" : "opacity-0")}/>
+                                                <div>
+                                                    <p>{server.url}</p>
+                                                    {server.description && (
+                                                        <p className="text-xs text-muted-foreground">
+                                                            {server.description}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                </CommandList>
+                            </Command>
+                        </PopoverContent>
+                    )}
                 </Popover>
             </CardContent>
         </Card>
-    );
+    )
+        ;
 };
 
 export default Servers;

@@ -1,23 +1,19 @@
 import { useState, useEffect } from 'react';
 import { OpenAPIV3 } from 'openapi-types';
+import { useOpenAPIContext } from './OpenAPIContext';
 
-export interface SwaggerClientOptions {
-    openApiUrl: string;
-}
-
-export interface UseSwaggerClientResult {
-    spec: OpenAPIV3.Document | null;
-    loading: boolean;
-    error: Error | null;
-}
-
-export function useSwaggerClient({ openApiUrl }: SwaggerClientOptions): UseSwaggerClientResult {
-    const [spec, setSpec] = useState<OpenAPIV3.Document | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
-    const [error, setError] = useState<Error | null>(null);
+export function useSpec({ openApiUrl }: { openApiUrl: string }) {
+    const {
+        spec,
+        setSpec,
+        loading,
+        setLoading,
+        error,
+        setError
+    } = useOpenAPIContext();
 
     useEffect(() => {
-        async function fetchSwaggerDocumentation() {
+        async function fetchSpec() {
             try {
                 setLoading(true);
                 const response = await fetch(openApiUrl);
@@ -35,12 +31,8 @@ export function useSwaggerClient({ openApiUrl }: SwaggerClientOptions): UseSwagg
             }
         }
 
-        fetchSwaggerDocumentation();
-    }, [openApiUrl]);
+        fetchSpec();
+    }, [openApiUrl, setSpec, setLoading, setError]);
 
-    return {
-        spec,
-        loading,
-        error
-    };
+    return { spec, loading, error };
 }
