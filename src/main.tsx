@@ -10,5 +10,5 @@ createRoot(document.getElementById('root')!).render(
             {/* See examples to test doc : https://apis.guru/ */}
             <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/asana.com/1.0/openapi.json"} />
         </OpenAPIProvider>
-    </StrictMode>,
+    </StrictMode>
 )

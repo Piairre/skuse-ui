@@ -43,7 +43,7 @@ const Header: React.FC<OpenAPIHeaderProps> = ({document}) => {
                     </div>
 
                     <div>
-                        <div className="flex">
+                        <div className="flex justify-end">
                             {info.contact?.email && (
                                 <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
                                     <a href={`mailto:${info.contact.email}`}

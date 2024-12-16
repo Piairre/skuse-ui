@@ -53,7 +53,6 @@ const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {
                     </TabsList>
 
                     {Object.entries(securitySchemes).map(([name, scheme]) => {
-                        console.log(scheme);
                         const AuthMethodComponent = getAuthMethodComponent(scheme);
                         return (
                             <TabsContent className="max-h-80 overflow-y-auto" key={name} value={name}>

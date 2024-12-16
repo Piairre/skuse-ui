@@ -11,8 +11,9 @@ import {
 import {OpenAPIV3} from 'openapi-types';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
-import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList} from "@/components/ui/command";
+import {Command, CommandEmpty, CommandGroup, CommandItem, CommandList} from "@/components/ui/command";
 import {cn} from "@/lib/utils";
+import {AuthorizeButton} from "@/components/openapi/Auth/AuthButton";
 
 export const BasicAuthMethod: React.FC<{
     scheme: OpenAPIV3.HttpSecurityScheme
@@ -43,10 +44,7 @@ export const BasicAuthMethod: React.FC<{
                     placeholder="Enter password"
                 />
             </div>
-            <Button className="w-full">
-                <ShieldCheck className="mr-2 h-4 w-4"/>
-                Authenticate
-            </Button>
+            <AuthorizeButton onClick={() => console.log('TODO: Authenticate user')}/>
         </div>
     );
 };
@@ -76,10 +74,7 @@ export const BearerTokenMethod: React.FC<{
                     placeholder="Enter bearer token"
                 />
             </div>
-            <Button className="w-full">
-                <ShieldCheck className="mr-2 h-4 w-4"/>
-                Add Token
-            </Button>
+            <AuthorizeButton onClick={() => console.log('TODO: Save Bearer Token')}/>
         </div>
     );
 };
@@ -104,10 +99,7 @@ export const ApiKeyMethod: React.FC<{
                     placeholder={`${scheme.name} - ${scheme.in}`}
                 />
             </div>
-            <Button className="w-full">
-                <ShieldCheck className="mr-2 h-4 w-4"/>
-                Save ${scheme.name}
-            </Button>
+            <AuthorizeButton onClick={() => console.log('TODO: Save API Token')}/>
         </div>
     );
 };
@@ -115,11 +107,11 @@ export const ApiKeyMethod: React.FC<{
 export const OAuth2Method: React.FC<{
     scheme: OpenAPIV3.OAuth2SecurityScheme
 }> = ({scheme}) => {
-    const [selectedFlow, setSelectedFlow] = useState<keyof OpenAPIV3.OAuth2SecurityScheme['flows'] | null>(null);
-    const [open, setOpen] = useState(false)
-
     // Determine available flows
     const availableFlows = Object.keys(scheme.flows || {}) as Array<keyof OpenAPIV3.OAuth2SecurityScheme['flows']>;
+
+    const [selectedFlow, setSelectedFlow] = useState<keyof OpenAPIV3.OAuth2SecurityScheme['flows'] | null>(availableFlows[0]);
+    const [open, setOpen] = useState(false)
 
     return (
         <div className="space-y-4">
@@ -144,9 +136,8 @@ export const OAuth2Method: React.FC<{
                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
                         <Command>
-                            <CommandInput placeholder="Search flow..."/>
                             <CommandList>
                                 <CommandEmpty>No flow found.</CommandEmpty>
                                 <CommandGroup>
@@ -208,10 +199,7 @@ export const OAuth2Method: React.FC<{
                             </>
                         )}
                     </div>
-                    <Button className="w-full">
-                        <ShieldCheck className="mr-2 h-4 w-4"/>
-                        Authorize with {selectedFlow}
-                    </Button>
+                    <AuthorizeButton onClick={() => console.log('TODO: Go to OAuth Page')}/>
                 </div>
             )}
         </div>
@@ -236,10 +224,7 @@ export const OpenIDMethod: React.FC<{
                     className="cursor-not-allowed"
                 />
             </div>
-            <Button className="w-full">
-                <ShieldCheck className="mr-2 h-4 w-4"/>
-                Connect to OpenID
-            </Button>
+            <AuthorizeButton onClick={() => console.log('TODO: Go to Open ID URL')}/>
         </div>
     );
 };
