@@ -7,18 +7,16 @@ import {
     Mail,
     Earth
 } from 'lucide-react';
-import {OpenAPIV3} from "openapi-types";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import Servers from "@/components/openapi/Servers";
 import Auth from "@/components/openapi/Auth/AuthButton";
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
-interface OpenAPIHeaderProps {
-    document: OpenAPIV3.Document;
-}
+const Header: React.FC = () => {
+    const {spec} = useOpenAPIContext();
 
-const Header: React.FC<OpenAPIHeaderProps> = ({document}) => {
     // Provide default values and handle potential undefined cases
-    const info = document?.info ?? {
+    const info = spec?.info ?? {
         title: 'API Documentation',
         version: '1.0.0',
         description: '',
@@ -38,7 +36,7 @@ const Header: React.FC<OpenAPIHeaderProps> = ({document}) => {
                         </Badge>
                         <Badge variant="outline"
                                className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white flex justify-center items-center px-3 py-1 me-2">
-                            OAS: {document.openapi}
+                            OAS: {spec?.openapi}
                         </Badge>
                     </div>
 
@@ -64,12 +62,12 @@ const Header: React.FC<OpenAPIHeaderProps> = ({document}) => {
                                 </Badge>
                             )}
 
-                            {document.externalDocs && (
+                            {spec?.externalDocs && (
                                 <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                    <a href={document.externalDocs.url} target="_blank" rel="noopener noreferrer"
+                                    <a href={spec.externalDocs.url} target="_blank" rel="noopener noreferrer"
                                        className="flex items-center hover:underline">
                                         <ExternalLink className="w-4 h-4 me-2 text-primary"/>
-                                        {document.externalDocs.description || 'Documentation'}
+                                        {spec.externalDocs.description || 'Documentation'}
                                     </a>
                                 </Badge>
                             )}
@@ -106,8 +104,8 @@ const Header: React.FC<OpenAPIHeaderProps> = ({document}) => {
             </CardHeader>
             <CardContent>
                 <div className="grid lg:grid-cols-2 gap-2">
-                    <Servers servers={document.servers ?? []}/>
-                    <Auth securitySchemes={document.components?.securitySchemes ?? null}/>
+                    <Servers servers={spec?.servers ?? []}/>
+                    <Auth securitySchemes={spec?.components?.securitySchemes ?? null}/>
                 </div>
 
                 {info.description && (

@@ -6,6 +6,7 @@
     "noEmit": true,
     "moduleResolution": "Bundler",
     "noUncheckedIndexedAccess": true,
+    "strictNullChecks": true,
     "allowSyntheticDefaultImports": true,
     "jsx": "react-jsx",
     "baseUrl": ".",

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { OpenAPIV3 } from 'openapi-types';
 import { useOpenAPIContext } from './OpenAPIContext';
 

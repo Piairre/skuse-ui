@@ -5,10 +5,8 @@ import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
 import {OpenAPIV3} from "openapi-types";
 import {EnhancedOperationObject, TaggedOperationsMap} from "@/types/openapi";
-
-interface SkuseUISidebarProps {
-    groupedEndpointsByTag: TaggedOperationsMap
-}
+import {groupEndpointsByTags} from "@/utils/openapi";
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
 const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
     get: 'bg-green-500',
@@ -21,8 +19,12 @@ const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
     trace: 'bg-pink-500'
 };
 
-const Sidebar: React.FC<SkuseUISidebarProps> = ({groupedEndpointsByTag}) => {
+const Sidebar: React.FC = () => {
+
     const [openTag, setOpenTag] = useState<string | null>(null);
+
+    const spec = useOpenAPIContext().spec;
+    const groupedEndpointsByTag = groupEndpointsByTags(spec?.paths as Record<string, OpenAPIV3.PathItemObject>);
 
     // Manage endpoints without tags
     const tags = Object.entries(groupedEndpointsByTag).filter((tag) => tag[0] !== 'null');
