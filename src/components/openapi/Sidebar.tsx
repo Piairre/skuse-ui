@@ -1,12 +1,13 @@
-import React, {useState} from 'react';
-import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
-import {ChevronDown, ChevronUp} from 'lucide-react';
-import {Badge} from "@/components/ui/badge";
-import {Button} from "@/components/ui/button";
-import {OpenAPIV3} from "openapi-types";
-import {EnhancedOperationObject, TaggedOperationsMap} from "@/types/openapi";
-import {groupEndpointsByTags} from "@/utils/openapi";
-import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
+import React, { useState } from 'react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { OpenAPIV3 } from "openapi-types";
+import { EnhancedOperationObject } from "@/types/openapi";
+import { groupEndpointsByTags } from "@/utils/openapi";
+import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
+import { Link } from "@tanstack/react-router";
 
 const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
     get: 'bg-green-500',
@@ -20,20 +21,23 @@ const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
 };
 
 const Sidebar: React.FC = () => {
-
     const [openTag, setOpenTag] = useState<string | null>(null);
 
     const spec = useOpenAPIContext().spec;
     const groupedEndpointsByTag = groupEndpointsByTags(spec?.paths as Record<string, OpenAPIV3.PathItemObject>);
 
     // Manage endpoints without tags
-    const tags = Object.entries(groupedEndpointsByTag).filter((tag) => tag[0] !== 'null');
+    const tags = Object.entries(groupedEndpointsByTag).filter(([tag]) => tag !== 'null');
     const untaggedEndpoints = groupedEndpointsByTag['null'] || [];
 
     return (
         <div className="w-80 bg-secondary/10 shadow-lg py-2">
             {tags.map(([tag, endpoints]) => (
-                <Collapsible key={tag} open={openTag === tag} onOpenChange={(isOpen) => setOpenTag(isOpen ? tag : null)}>
+                <Collapsible
+                    key={`collapsible-${tag}`} // Utilisation d'une clé unique basée sur le tag
+                    open={openTag === tag}
+                    onOpenChange={(isOpen) => setOpenTag(isOpen ? tag : null)}
+                >
                     <CollapsibleTrigger asChild>
                         <Button
                             variant="ghost"
@@ -42,13 +46,17 @@ const Sidebar: React.FC = () => {
                             <div className="flex items-center space-x-2">
                                 <span className="font-semibold">{tag}</span>
                             </div>
-                            {openTag === tag ? <ChevronUp className="w-4 h-4"/> : <ChevronDown className="w-4 h-4"/>}
+                            {openTag === tag ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                         </Button>
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                         <div className="space-y-2 pl-4">
                             {endpoints.map((operation) => (
-                                <SidebarEndpoint key={`${tag}-${operation.path}-${operation.method}`} operation={operation}/>
+                                <SidebarEndpoint
+                                    key={`${tag}-${operation.operationId || operation.path}-${operation.method}`} // Clé unique basée sur tag, operationId et méthode
+                                    operation={operation}
+                                    tag={tag}
+                                />
                             ))}
                         </div>
                     </CollapsibleContent>
@@ -58,7 +66,10 @@ const Sidebar: React.FC = () => {
             {untaggedEndpoints.length > 0 && (
                 <div className="space-y-2">
                     {untaggedEndpoints.map((operation) => (
-                        <SidebarEndpoint key={`${operation.method}-${operation.path}`} operation={operation}/>
+                        <SidebarEndpoint
+                            key={`untagged-${operation.operationId || operation.path}-${operation.method}`} // Clé unique pour les endpoints sans tags
+                            operation={operation}
+                        />
                     ))}
                 </div>
             )}
@@ -66,13 +77,37 @@ const Sidebar: React.FC = () => {
     );
 };
 
-const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject, key: string }> = ({operation}) => {
+const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: string }> = ({ operation, tag }) => {
+    // Build the link to the operation
+    let operationIdentifier = operation.operationId;
+
+    // Fallback if no operationId is provided
+    if (!operationIdentifier) {
+        let formattedPath = operation.path.replace(/\//g, '_');
+        operationIdentifier = `${operation.method.toLowerCase()}${formattedPath}`;
+    }
+
+    let linkTo = `/$operationIdentifier`;
+    let params = {
+        operationIdentifier: operationIdentifier,
+        ...(tag && { tag }) // Add tag to params if it exists
+    };
+
+    console.log(params);
+
+    if (tag) {
+        linkTo = `/$tag/$operationIdentifier`;
+    }
+
     return (
-        <div
+        <Link
+            to={linkTo}
+            params={params}
             className={`flex items-center space-x-2 p-2 hover:bg-secondary/20 cursor-pointer hover:border-l-4 transition-all duration-200`}
         >
             <Badge
-                className={`${httpMethodColors[operation.method.toLowerCase()]} text-white uppercase w-14 flex justify-center items-center`}>
+                className={`${httpMethodColors[operation.method.toLowerCase()]} text-white uppercase w-14 flex justify-center items-center`}
+            >
                 {operation.method}
             </Badge>
             <div className="flex-1 min-w-0">
@@ -81,13 +116,13 @@ const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject, key: strin
                 </p>
                 <div className="text-xs text-muted-foreground truncate">
                     {operation.deprecated ? (
-                        <span className="text-orange-500 font-bold">Deprecated</span>
+                        <span className="text-orange-500 font-bold">Deprecated </span>
                     ) : null}
                     <span>{operation.summary || operation.description}</span>
                 </div>
             </div>
-        </div>
-    )
-}
+        </Link>
+    );
+};
 
 export default Sidebar;

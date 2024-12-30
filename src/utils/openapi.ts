@@ -1,7 +1,8 @@
 import { OpenAPIV3 } from 'openapi-types';
 import { EnhancedOperationObject, TaggedOperationsMap } from '@/types/openapi';
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
-export function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
+function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
     const tagMap: TaggedOperationsMap = {};
 
     const httpMethods = Object.values(OpenAPIV3.HttpMethods) as string[];
@@ -38,6 +39,24 @@ export function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperat
     return tagMap;
 }
 
+function findOperationByOperationIdAndTag(
+    operationId: string,
+    tag?: string
+): EnhancedOperationObject | null {
+    const spec = useOpenAPIContext().spec;
+
+    if (!spec) return null;
+
+    console.log(spec);
+    console.log(operationId, tag);
+
+    const groupedEndpointsByTag = groupEndpointsByTags(spec.paths as Record<string, OpenAPIV3.PathItemObject>);
+
+    const tagEndpoints = groupedEndpointsByTag[tag || 'null'];
+    if (!tagEndpoints) return null;
+
+    return tagEndpoints.find(endpoint => endpoint.operationId === operationId) || null;
+}
 
 // References resolver
 type ReferenceObject = { $ref: string };
@@ -97,4 +116,4 @@ function resolveReferences<T>(
     return obj;
 }
 
-export { resolveReference, resolveReferences };
+export { groupEndpointsByTags, findOperationByOperationIdAndTag, resolveReference, resolveReferences };

@@ -5,15 +5,21 @@ import {
 } from '@tanstack/react-router';
 import Header from '@/components/openapi/Header';
 import {SkuseDocumentation} from "@/SkuseDocumentation";
+import EndpointDetails from "@/components/openapi/EndpointDetails";
+import { findOperationByOperationIdAndTag } from '@/utils/openapi';
+
+interface EndpointParams {
+    tag?: string;
+    operationId: string;
+}
 
 const rootRoute = new RootRoute({
     // See examples to test doc : https://apis.guru/
     component: () => {
-        return <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/github.com/1.1.4/openapi.json"} />;
+        return <SkuseDocumentation openApiUrl={"https://demo.api-platform.com/docs.jsonopenapi"} />;
     }
 });
 
-// Route pour la page d'accueil
 const indexRoute = new Route({
     getParentRoute: () => rootRoute,
     path: '/',
@@ -22,20 +28,31 @@ const indexRoute = new Route({
     }
 });
 
-// Route pour les endpoints
+// Endpoint routes
 const endpointRoute = new Route({
     getParentRoute: () => rootRoute,
-    path: '/endpoints/$tag/$method/$path',
+    path: '/$tag/$operationId',
     component: () => {
-        return (
-            <div>
-                <h1>Endpoint Details</h1>
-                <pre>Pierre</pre>
-            </div>
-        );
+        const { tag, operationId } = endpointRoute.useParams();
+
+        let operation = findOperationByOperationIdAndTag(operationId, tag);
+
+        return <EndpointDetails operation={operation} />;
     }
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, endpointRoute]);
+const endpointRouteUntagged = new Route({
+    getParentRoute: () => rootRoute,
+    path: '/$operationId',
+    component: () => {
+        const { operationId }: EndpointParams = endpointRouteUntagged.useParams();
+
+        let operation = findOperationByOperationIdAndTag(operationId);
+
+        return <EndpointDetails operation={operation} />;
+    }
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, endpointRouteUntagged]);
 
 export const router = new Router({ routeTree });

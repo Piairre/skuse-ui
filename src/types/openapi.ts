@@ -5,4 +5,4 @@ export interface EnhancedOperationObject extends OpenAPIV3.OperationObject {
     method: Uppercase<OpenAPIV3.HttpMethods>;
 }
 
-export type TaggedOperationsMap = Record<string | null, EnhancedOperationObject[]>;
+export type TaggedOperationsMap = Record<string, EnhancedOperationObject[]>;

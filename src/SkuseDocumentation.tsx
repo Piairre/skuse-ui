@@ -1,8 +1,7 @@
 import React from 'react';
 import {useSpec} from '@/hooks/useSpec';
-import {groupEndpointsByTags} from '@/utils/openapi';
-import Header from "@/components/openapi/Header";
 import Sidebar from "@/components/openapi/Sidebar";
+import {Outlet} from "@tanstack/react-router";
 
 interface SkuseDocumentationProps {
     openApiUrl: string;
@@ -23,7 +22,7 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
             </div>
             <div className="flex-1 overflow-y-auto m-2">
                 <div className="sticky top-0 bg-white">
-                    <Header />
+                    <Outlet />
                 </div>
             </div>
         </div>
