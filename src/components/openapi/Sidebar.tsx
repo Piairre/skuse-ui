@@ -5,20 +5,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { OpenAPIV3 } from "openapi-types";
 import { EnhancedOperationObject } from "@/types/openapi";
-import { groupEndpointsByTags } from "@/utils/openapi";
+import {getBadgeColor, groupEndpointsByTags} from "@/utils/openapi";
 import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 import { Link } from "@tanstack/react-router";
-
-const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
-    get: 'bg-green-500',
-    post: 'bg-blue-500',
-    put: 'bg-yellow-500',
-    patch: 'bg-teal-500',
-    delete: 'bg-red-500',
-    options: 'bg-purple-500',
-    head: 'bg-gray-500',
-    trace: 'bg-pink-500'
-};
 
 const Sidebar: React.FC = () => {
     const [openTag, setOpenTag] = useState<string | null>(null);
@@ -93,8 +82,6 @@ const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: stri
         ...(tag && { tag }) // Add tag to params if it exists
     };
 
-    console.log(params);
-
     if (tag) {
         linkTo = `/$tag/$operationIdentifier`;
     }
@@ -106,7 +93,7 @@ const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: stri
             className={`flex items-center space-x-2 p-2 hover:bg-secondary/20 cursor-pointer hover:border-l-4 transition-all duration-200`}
         >
             <Badge
-                className={`${httpMethodColors[operation.method.toLowerCase()]} text-white uppercase w-14 flex justify-center items-center`}
+                className={`${getBadgeColor(operation.method.toLowerCase())} text-white uppercase w-14 flex justify-center items-center`}
             >
                 {operation.method}
             </Badge>

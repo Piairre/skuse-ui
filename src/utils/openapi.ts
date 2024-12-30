@@ -1,5 +1,5 @@
-import { OpenAPIV3 } from 'openapi-types';
-import { EnhancedOperationObject, TaggedOperationsMap } from '@/types/openapi';
+import {OpenAPIV3} from 'openapi-types';
+import {EnhancedOperationObject, TaggedOperationsMap} from '@/types/openapi';
 import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
 function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
@@ -47,15 +47,27 @@ function findOperationByOperationIdAndTag(
 
     if (!spec) return null;
 
-    console.log(spec);
-    console.log(operationId, tag);
-
     const groupedEndpointsByTag = groupEndpointsByTags(spec.paths as Record<string, OpenAPIV3.PathItemObject>);
 
     const tagEndpoints = groupedEndpointsByTag[tag || 'null'];
     if (!tagEndpoints) return null;
 
     return tagEndpoints.find(endpoint => endpoint.operationId === operationId) || null;
+}
+
+function getBadgeColor(httpMethod: string): string {
+    const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
+        get: 'bg-green-500',
+        post: 'bg-blue-500',
+        put: 'bg-yellow-500',
+        patch: 'bg-teal-500',
+        delete: 'bg-red-500',
+        options: 'bg-purple-500',
+        head: 'bg-gray-500',
+        trace: 'bg-pink-500'
+    };
+
+    return httpMethodColors[httpMethod.toLowerCase()];
 }
 
 // References resolver
@@ -116,4 +128,4 @@ function resolveReferences<T>(
     return obj;
 }
 
-export { groupEndpointsByTags, findOperationByOperationIdAndTag, resolveReference, resolveReferences };
+export {groupEndpointsByTags, findOperationByOperationIdAndTag, getBadgeColor, resolveReference, resolveReferences};

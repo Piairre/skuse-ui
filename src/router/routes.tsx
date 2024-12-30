@@ -1,7 +1,7 @@
 import {
     Route,
     RootRoute,
-    Router
+    Router, useNavigate
 } from '@tanstack/react-router';
 import Header from '@/components/openapi/Header';
 import {SkuseDocumentation} from "@/SkuseDocumentation";
@@ -16,7 +16,7 @@ interface EndpointParams {
 const rootRoute = new RootRoute({
     // See examples to test doc : https://apis.guru/
     component: () => {
-        return <SkuseDocumentation openApiUrl={"https://demo.api-platform.com/docs.jsonopenapi"} />;
+        return <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/amazonaws.com/acm/2015-12-08/openapi.json"} />;
     }
 });
 

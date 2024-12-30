@@ -1,7 +1,9 @@
 import React from 'react';
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {Card, CardHeader, CardTitle, CardContent, CardDescription} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EnhancedOperationObject } from "@/types/openapi";
+import {getBadgeColor} from "@/utils/openapi";
+import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 
 interface EndpointDetailsProps {
     operation: EnhancedOperationObject | null;
@@ -9,6 +11,7 @@ interface EndpointDetailsProps {
 
 const EndpointDetails: React.FC<EndpointDetailsProps> = ({ operation }) => {
     if (!operation) {
+        // TODO: This can be improved with a 404 page
         return (
             <div>Not found</div>
         );
@@ -18,37 +21,23 @@ const EndpointDetails: React.FC<EndpointDetailsProps> = ({ operation }) => {
         <Card className="w-full mx-auto">
             <CardHeader>
                 <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-lg">
+                    <Badge
+                        className={`${getBadgeColor(operation.method.toLowerCase())} text-white text-lg uppercase flex justify-center items-center`}
+                    >
                         {operation.method.toUpperCase()}
                     </Badge>
-                    <CardTitle className="text-xl">
+                    <CardTitle className="text-2xl">
                         {operation.path}
                     </CardTitle>
                 </div>
+                <CardDescription className="text-base">
+                    {operation.summary}
+                </CardDescription>
             </CardHeader>
             <CardContent>
-                <div className="space-y-4">
-                    {operation.summary && (
-                        <div>
-                            <h3 className="text-lg font-semibold">Summary</h3>
-                            <p>{operation.summary}</p>
-                        </div>
-                    )}
-
-                    {operation.description && (
-                        <div>
-                            <h3 className="text-lg font-semibold">Description</h3>
-                            <p>{operation.description}</p>
-                        </div>
-                    )}
-
-                    {/* Vous pourrez ajouter ici d'autres sections comme :
-           * - Parameters
-           * - Request Body
-           * - Responses
-           * - Examples
-           */}
-                </div>
+                {operation.description && (
+                    <FormattedMarkdown markdown={operation.description} />
+                )}
             </CardContent>
         </Card>
     );
