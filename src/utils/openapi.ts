@@ -1,12 +1,13 @@
-import { OpenAPIV3 } from 'openapi-types';
-import { EnhancedOperationObject, TaggedOperationsMap } from '@/types/openapi';
+import {OpenAPIV3} from 'openapi-types';
+import {EnhancedOperationObject, TaggedOperationsMap} from '@/types/openapi';
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
-export function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
+function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
     const tagMap: TaggedOperationsMap = {};
 
     const httpMethods = Object.values(OpenAPIV3.HttpMethods) as string[];
 
-    function pushToTag(tag: string | null, operation: OpenAPIV3.OperationObject, path: string, method: string) {
+    function pushToTag(tag: string, operation: OpenAPIV3.OperationObject, path: string, method: string) {
         if (!tagMap[tag]) {
             tagMap[tag] = [];
         }
@@ -21,21 +22,53 @@ export function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperat
     }
 
     Object.entries(paths).forEach(([path, pathItem]) => {
-        Object.entries(pathItem).forEach(([method, operation]) => {
-            if (httpMethods.includes(method)) {
-                const typedOperation = operation as OpenAPIV3.OperationObject;
-                const tag = typedOperation.tags && typedOperation.tags.length > 0
-                    ? typedOperation.tags[0]
-                    : null;
+        if (pathItem) {
+            Object.entries(pathItem).forEach(([method, operation]) => {
+                if (httpMethods.includes(method)) {
+                    const typedOperation = operation as OpenAPIV3.OperationObject;
+                    const tag = typedOperation.tags && typedOperation.tags.length > 0
+                        ? typedOperation.tags[0] as string
+                        : 'null';
 
-                pushToTag(tag, typedOperation, path, method);
-            }
-        });
+                    pushToTag(tag, typedOperation, path, method);
+                }
+            });
+        }
     });
 
     return tagMap;
 }
 
+function findOperationByOperationIdAndTag(
+    operationId: string,
+    tag?: string
+): EnhancedOperationObject | null {
+    const spec = useOpenAPIContext().spec;
+
+    if (!spec) return null;
+
+    const groupedEndpointsByTag = groupEndpointsByTags(spec.paths as Record<string, OpenAPIV3.PathItemObject>);
+
+    const tagEndpoints = groupedEndpointsByTag[tag || 'null'];
+    if (!tagEndpoints) return null;
+
+    return tagEndpoints.find(endpoint => endpoint.operationId === operationId) || null;
+}
+
+function getBadgeColor(httpMethod: string): string {
+    const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
+        get: 'bg-green-500',
+        post: 'bg-blue-500',
+        put: 'bg-yellow-500',
+        patch: 'bg-teal-500',
+        delete: 'bg-red-500',
+        options: 'bg-purple-500',
+        head: 'bg-gray-500',
+        trace: 'bg-pink-500'
+    };
+
+    return httpMethodColors[httpMethod.toLowerCase()];
+}
 
 // References resolver
 type ReferenceObject = { $ref: string };
@@ -95,4 +128,4 @@ function resolveReferences<T>(
     return obj;
 }
 
-export { resolveReference, resolveReferences };
+export {groupEndpointsByTags, findOperationByOperationIdAndTag, getBadgeColor, resolveReference, resolveReferences};
