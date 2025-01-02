@@ -1,72 +1,91 @@
-import React, { useState } from 'react';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, ChevronUp } from 'lucide-react';
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { OpenAPIV3 } from "openapi-types";
-import { EnhancedOperationObject } from "@/types/openapi";
+import React, {useState} from 'react';
+import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
+import {ChevronDown, ChevronUp, Moon, Sun} from 'lucide-react';
+import {Badge} from "@/components/ui/badge";
+import {Button} from "@/components/ui/button";
+import {OpenAPIV3} from "openapi-types";
+import {EnhancedOperationObject} from "@/types/openapi";
 import {getBadgeColor, groupEndpointsByTags} from "@/utils/openapi";
-import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
-import { Link } from "@tanstack/react-router";
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
+import {Link} from "@tanstack/react-router";
+import {useTheme} from "@/components/theme-provider";
+import {Switch} from "@/components/ui/switch";
 
 const Sidebar: React.FC = () => {
     const [openTag, setOpenTag] = useState<string | null>(null);
 
     const spec = useOpenAPIContext().spec;
     const groupedEndpointsByTag = groupEndpointsByTags(spec?.paths as Record<string, OpenAPIV3.PathItemObject>);
+    const { theme, setTheme } = useTheme();
 
     // Manage endpoints without tags
     const tags = Object.entries(groupedEndpointsByTag).filter(([tag]) => tag !== 'null');
     const untaggedEndpoints = groupedEndpointsByTag['null'] || [];
 
     return (
-        <div className="w-80 bg-secondary/10 shadow-lg py-2">
-            {tags.map(([tag, endpoints]) => (
-                <Collapsible
-                    key={`collapsible-${tag}`} // Utilisation d'une clé unique basée sur le tag
-                    open={openTag === tag}
-                    onOpenChange={(isOpen) => setOpenTag(isOpen ? tag : null)}
-                >
-                    <CollapsibleTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            className="w-full justify-between hover:bg-secondary/20 mb-2 hover:text-primary hover:border-l-4 hover:border-primary transition-all duration-200"
-                        >
-                            <div className="flex items-center space-x-2">
-                                <span className="font-semibold">{tag}</span>
+        <div className="w-80 shadow-lg flex flex-col h-full">
+            <div className="flex-grow py-2 overflow-y-auto">
+                {tags.map(([tag, endpoints]) => (
+                    <Collapsible
+                        key={`collapsible-${tag}`}
+                        open={openTag === tag}
+                        onOpenChange={(isOpen) => setOpenTag(isOpen ? tag : null)}
+                    >
+                        <CollapsibleTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                className="w-full justify-between hover:bg-secondary/20 dark:hover:bg-zinc-700/50 mb-2 hover:text-primary hover:border-l-4 hover:border-primary transition-all duration-200"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <span className="font-semibold">{tag}</span>
+                                </div>
+                                {openTag === tag ? <ChevronUp className="w-4 h-4"/> : <ChevronDown className="w-4 h-4"/>}
+                            </Button>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                            <div className="space-y-2 pl-4">
+                                {endpoints.map((operation) => (
+                                    <SidebarEndpoint
+                                        key={`${tag}-${operation.operationId || operation.path}-${operation.method}`}
+                                        operation={operation}
+                                        tag={tag}
+                                    />
+                                ))}
                             </div>
-                            {openTag === tag ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                        </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                        <div className="space-y-2 pl-4">
-                            {endpoints.map((operation) => (
-                                <SidebarEndpoint
-                                    key={`${tag}-${operation.operationId || operation.path}-${operation.method}`} // Clé unique basée sur tag, operationId et méthode
-                                    operation={operation}
-                                    tag={tag}
-                                />
-                            ))}
-                        </div>
-                    </CollapsibleContent>
-                </Collapsible>
-            ))}
+                        </CollapsibleContent>
+                    </Collapsible>
+                ))}
 
-            {untaggedEndpoints.length > 0 && (
-                <div className="space-y-2">
-                    {untaggedEndpoints.map((operation) => (
-                        <SidebarEndpoint
-                            key={`untagged-${operation.operationId || operation.path}-${operation.method}`} // Clé unique pour les endpoints sans tags
-                            operation={operation}
+                {untaggedEndpoints.length > 0 && (
+                    <div className="space-y-2">
+                        {untaggedEndpoints.map((operation) => (
+                            <SidebarEndpoint
+                                key={`untagged-${operation.operationId || operation.path}-${operation.method}`}
+                                operation={operation}
+                            />
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="mt-auto border-t dark:border-zinc-700 p-4">
+                <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold dark:text-white">Skuse</span>
+                    <div className="flex items-center space-x-2">
+                        <Sun className="h-4 w-4 dark:text-zinc-400" />
+                        <Switch
+                            checked={theme === 'dark'}
+                            onCheckedChange={(checked) => setTheme(checked ? 'dark' : 'light')}
                         />
-                    ))}
+                        <Moon className="h-4 w-4 dark:text-zinc-400" />
+                    </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 };
 
-const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: string }> = ({ operation, tag }) => {
+const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: string }> = ({operation, tag}) => {
     // Build the link to the operation
     let operationIdentifier = operation.operationId;
 
@@ -79,7 +98,7 @@ const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: stri
     let linkTo = `/$operationIdentifier`;
     let params = {
         operationIdentifier: operationIdentifier,
-        ...(tag && { tag }) // Add tag to params if it exists
+        ...(tag && {tag}) // Add tag to params if it exists
     };
 
     if (tag) {
@@ -105,7 +124,7 @@ const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: stri
                     {operation.deprecated ? (
                         <span className="text-orange-500 font-bold">Deprecated </span>
                     ) : null}
-                    <span>{operation.summary || operation.description}</span>
+                    <span>{operation.summary}</span>
                 </div>
             </div>
         </Link>

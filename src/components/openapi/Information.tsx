@@ -12,7 +12,7 @@ import Servers from "@/components/openapi/Servers";
 import Auth from "@/components/openapi/Auth/AuthButton";
 import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
-const Header: React.FC = () => {
+const Information: React.FC = () => {
     const {spec} = useOpenAPIContext();
 
     // Provide default values and handle potential undefined cases
@@ -31,7 +31,7 @@ const Header: React.FC = () => {
                 <div className="flex justify-between items-center">
                     <div className="flex">
                         <Badge variant="outline"
-                               className="border-black text-black hover:bg-black hover:text-white flex justify-center items-center px-3 py-1 me-2">
+                               className="border-black dark:border-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black flex justify-center items-center px-3 py-1 me-2">
                             API: {info.version}
                         </Badge>
                         <Badge variant="outline"
@@ -75,7 +75,8 @@ const Header: React.FC = () => {
 
                         <div className="flex justify-end">
                             {info.license && (
-                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2 mt-1">
+                                <Badge variant="secondary"
+                                       className="flex justify-center items-center px-3 py-1 me-2 mt-1">
                                     <a href={info.license.url} target="_blank" rel="noopener noreferrer"
                                        className="flex items-center hover:underline">
                                         <Scale className="w-4 h-4 me-2 text-primary"/>
@@ -85,7 +86,8 @@ const Header: React.FC = () => {
                             )}
 
                             {info.termsOfService && (
-                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2 mt-1">
+                                <Badge variant="secondary"
+                                       className="flex justify-center items-center px-3 py-1 me-2 mt-1">
                                     <a href={info.termsOfService} target="_blank" rel="noopener noreferrer"
                                        className="flex items-center hover:underline">
                                         <ExternalLink className="w-4 h-4 me-2 text-primary"/>
@@ -116,4 +118,4 @@ const Header: React.FC = () => {
     );
 };
 
-export default Header;
+export default Information;
