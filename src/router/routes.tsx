@@ -3,7 +3,7 @@ import {
     RootRoute,
     Router, useNavigate
 } from '@tanstack/react-router';
-import Header from '@/components/openapi/Header';
+import Information from '@/components/openapi/Information';
 import {SkuseDocumentation} from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/EndpointDetails";
 import { findOperationByOperationIdAndTag } from '@/utils/openapi';
@@ -16,7 +16,7 @@ interface EndpointParams {
 const rootRoute = new RootRoute({
     // See examples to test doc : https://apis.guru/
     component: () => {
-        return <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/amazonaws.com/acm/2015-12-08/openapi.json"} />;
+        return <SkuseDocumentation openApiUrl={"https://demo.api-platform.com/docs.jsonopenapi"} />;
     }
 });
 
@@ -24,7 +24,7 @@ const indexRoute = new Route({
     getParentRoute: () => rootRoute,
     path: '/',
     component: () => {
-        return <Header />;
+        return <Information />;
     }
 });
 

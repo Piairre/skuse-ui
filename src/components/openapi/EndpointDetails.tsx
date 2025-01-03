@@ -36,7 +36,7 @@ const EndpointDetails: React.FC<EndpointDetailsProps> = ({ operation }) => {
             </CardHeader>
             <CardContent>
                 {operation.description && (
-                    <FormattedMarkdown markdown={operation.description} />
+                    <FormattedMarkdown className={"p-2"} markdown={operation.description} />
                 )}
             </CardContent>
         </Card>

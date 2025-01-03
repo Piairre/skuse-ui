@@ -15,6 +15,7 @@
     "@radix-ui/react-dialog": "^1.1.2",
     "@radix-ui/react-popover": "^1.1.2",
     "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-switch": "^1.1.2",
     "@radix-ui/react-tabs": "^1.1.1",
     "@shadcn/ui": "^0.0.4",
     "@tanstack/react-router": "^1.92.11",
@@ -31,6 +32,7 @@
     "rehype-external-links": "^3.0.0",
     "rehype-sanitize": "^6.0.0",
     "tailwind-merge": "^2.5.5",
+    "tailwind-scrollbar": "^3.1.0",
     "tailwindcss-animate": "^1.0.7"
   },
   "devDependencies": {
