@@ -67,3 +67,17 @@
         @apply bg-background text-foreground;
     }
 }
+
+@layer utilities {
+    * {
+        @apply scrollbar-thin scrollbar-thumb-muted-foreground scrollbar-track-muted;
+    }
+
+    *::-webkit-scrollbar-thumb {
+        @apply rounded-full;
+    }
+
+    *::-webkit-scrollbar-thumb:hover {
+        @apply bg-accent;
+    }
+}

@@ -5,7 +5,7 @@ import rehypeExternalLinks from 'rehype-external-links'
 
 interface MarkdownRendererProps {
     markdown: string;
-    maxHeight?: string;
+    className?: string;
 }
 
 // Polyfill for setImmediate if not available
@@ -67,7 +67,7 @@ export const useHashLinkFix = () => {
     }, []);
 };
 
-export default function FormattedMarkdown({markdown}: MarkdownRendererProps) {
+export default function FormattedMarkdown({markdown, className}: MarkdownRendererProps) {
 
     useHashLinkFix();
 
@@ -98,7 +98,7 @@ export default function FormattedMarkdown({markdown}: MarkdownRendererProps) {
                         }
                     ]
                 ]}
-                style={{padding: 10, wordBreak: 'break-word'}}
+                className={className}
             />
         </div>
     );

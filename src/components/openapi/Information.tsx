@@ -105,13 +105,13 @@ const Information: React.FC = () => {
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="grid lg:grid-cols-2 gap-2">
+                <div className="grid lg:grid-cols-2 gap-2 mb-2">
                     <Servers servers={spec?.servers ?? []}/>
                     <Auth securitySchemes={spec?.components?.securitySchemes ?? null}/>
                 </div>
 
                 {info.description && (
-                    <FormattedMarkdown markdown={info.description}/>
+                    <FormattedMarkdown className={"p-6 break-words"} markdown={info.description}/>
                 )}
             </CardContent>
         </Card>
