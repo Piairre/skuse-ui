@@ -1,4 +1,4 @@
-import React, {useEffect} from 'react';
+import React, {CSSProperties, useEffect} from 'react';
 import MarkdownPreview from '@uiw/react-markdown-preview';
 import rehypeSanitize, {defaultSchema} from "rehype-sanitize";
 import rehypeExternalLinks from 'rehype-external-links'
@@ -6,6 +6,7 @@ import rehypeExternalLinks from 'rehype-external-links'
 interface MarkdownRendererProps {
     markdown: string;
     className?: string;
+    style?: CSSProperties;
 }
 
 // Polyfill for setImmediate if not available
@@ -67,7 +68,7 @@ export const useHashLinkFix = () => {
     }, []);
 };
 
-export default function FormattedMarkdown({markdown, className}: MarkdownRendererProps) {
+export default function FormattedMarkdown({markdown, className, style}: MarkdownRendererProps) {
 
     useHashLinkFix();
 
@@ -98,6 +99,7 @@ export default function FormattedMarkdown({markdown, className}: MarkdownRendere
                         }
                     ]
                 ]}
+                style={style}
                 className={className}
             />
         </div>
