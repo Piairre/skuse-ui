@@ -93,6 +93,7 @@ function resolveReference<T>(
             resolvedObj = resolvedObj[pathPart];
         }
     } catch (error) {
+        console.log(error);
         throw new Error(`Can't resolve reference : ${obj.$ref}`);
     }
 
