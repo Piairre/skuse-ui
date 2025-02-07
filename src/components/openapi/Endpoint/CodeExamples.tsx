@@ -110,7 +110,10 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, serverUrl, re
                     </PopoverContent>
                 </Popover>
             </div>
-            <FormattedMarkdown markdown={snippet} />
+            <FormattedMarkdown
+                markdown={snippet}
+                className="[&_code]:!whitespace-pre-wrap"
+            />
         </div>
     );
 };
