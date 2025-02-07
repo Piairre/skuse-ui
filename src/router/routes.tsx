@@ -5,8 +5,9 @@ import {
 } from '@tanstack/react-router';
 import Information from '@/components/openapi/Information';
 import {SkuseDocumentation} from "@/SkuseDocumentation";
-import EndpointDetails from "@/components/openapi/EndpointDetails";
+import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import { findOperationByOperationIdAndTag } from '@/utils/openapi';
+import {EnhancedOperationObject} from "@/types/openapi";
 
 interface EndpointParams {
     tag?: string;
@@ -37,7 +38,8 @@ const endpointRoute = new Route({
 
         let operation = findOperationByOperationIdAndTag(operationId, tag);
 
-        return <EndpointDetails operation={operation} />;
+        // TODO: Add a 404 page if operation is not found
+        return <EndpointDetails operation={operation as EnhancedOperationObject} />;
     }
 });
 
@@ -49,7 +51,8 @@ const endpointRouteUntagged = new Route({
 
         let operation = findOperationByOperationIdAndTag(operationId);
 
-        return <EndpointDetails operation={operation} />;
+        // TODO: Add a 404 page if operation is not found
+        return <EndpointDetails operation={operation as EnhancedOperationObject} />;
     }
 });
 
