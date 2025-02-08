@@ -92,15 +92,15 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses, resolveRefer
 
     const getStatusStyles = (code: string): string => {
         if (code.startsWith('2')) {
-            return 'text-green-600 bg-transparent hover:bg-green-500 hover:text-white data-[state=active]:bg-green-500 data-[state=active]:text-white data-[state=active]:font-semibold';
+            return 'green';
         }
         if (code.startsWith('4')) {
-            return 'text-orange-600 bg-transparent hover:bg-orange-500 hover:text-white data-[state=active]:bg-orange-500 data-[state=active]:text-white data-[state=active]:font-semibold';
+            return 'orange';
         }
         if (code.startsWith('5')) {
-            return 'text-red-600 bg-transparent hover:bg-red-500 hover:text-white data-[state=active]:bg-red-500 data-[state=active]:text-white data-[state=active]:font-semibold';
+            return 'red';
         }
-        return 'text-gray-600 bg-transparent hover:bg-gray-500 hover:text-white data-[state=active]:bg-gray-500 data-[state=active]:text-white data-[state=active]:font-semibold';
+        return 'gray';
     };
 
     const generateExample = (schema: OpenAPIV3.SchemaObject): any => {
@@ -139,7 +139,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses, resolveRefer
                     <TabsTrigger
                         key={code}
                         value={code}
-                        className={`transition-colors ${getStatusStyles(code)}`}
+                        className={`transition-colors text-${getStatusStyles(code)}-600 bg-transparent hover:bg-${getStatusStyles(code)}-500 hover:text-white data-[state=active]:bg-${getStatusStyles(code)}-500 data-[state=active]:text-white data-[state=active]:font-semibold`}
                     >
                         {code}
                     </TabsTrigger>
@@ -151,39 +151,50 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses, resolveRefer
                     ? resolveReferences(response, spec) as OpenAPIV3.ResponseObject
                     : response;
 
-                if (!resolvedResponse.content) return null;
-
-                const contentType = Object.keys(resolvedResponse.content || {})[0];
-                if (!contentType || !resolvedResponse.content) return null;
-                const content = resolvedResponse.content[contentType];
-                const schema = content?.schema
-                    ? resolveReferences(content.schema, spec) as OpenAPIV3.SchemaObject
-                    : null;
-
                 return (
                     <TabsContent key={code} value={code} className="mt-4">
-                        <div className="grid grid-cols-2 gap-6">
-                            <div className="space-y-4">
-                                <h3 className="text-base font-medium">Schema</h3>
-                                <div className="p-4 border rounded-lg bg-white">
-                                    {schema && <SchemaProperty schema={schema} />}
-                                </div>
-                            </div>
-
-                            <div className="space-y-4">
-                                <h3 className="text-base font-medium">Example Response</h3>
-                                <div className="p-4 border rounded-lg bg-slate-50">
-                                    <FormattedMarkdown
-                                        markdown={`\`\`\`json\n${JSON.stringify(
-                                            content?.example || schema?.example || (schema ? generateExample(schema) : {}),
-                                            null,
-                                            2
-                                        )}\n\`\`\``}
-                                        className="[&_code]:!whitespace-pre-wrap text-sm"
-                                    />
-                                </div>
-                            </div>
+                        <div className={`text-lg text-center rounded p-1 my-1 font-semibold bg-${getStatusStyles(code)}-500 text-white`}>
+                            {code} - {resolvedResponse.description || 'No description'}
                         </div>
+
+                        {resolvedResponse.content && (
+                            <div className="grid grid-cols-1 gap-6">
+                                {(() => {
+                                    const contentType = Object.keys(resolvedResponse.content)[0];
+                                    if (!contentType) return null;
+
+                                    const content = resolvedResponse.content[contentType];
+                                    const schema = content?.schema
+                                        ? resolveReferences(content.schema, spec) as OpenAPIV3.SchemaObject
+                                        : null;
+
+                                    return (
+                                        <>
+                                            <div className="space-y-2">
+                                                <h3 className="text-base font-medium">Schema</h3>
+                                                <div className="p-2 border rounded-lg bg-white">
+                                                    {schema && <SchemaProperty schema={schema} />}
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <h3 className="text-base font-medium">Example Response</h3>
+                                                <div className="p-2 border rounded-lg bg-slate-50">
+                                                    <FormattedMarkdown
+                                                        markdown={`\`\`\`json\n${JSON.stringify(
+                                                            content?.example || schema?.example || (schema ? generateExample(schema) : {}),
+                                                            null,
+                                                            2
+                                                        )}\n\`\`\``}
+                                                        className="[&_code]:!whitespace-pre-wrap text-sm"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        )}
                     </TabsContent>
                 );
             })}
