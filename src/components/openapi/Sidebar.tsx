@@ -124,7 +124,7 @@ const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: stri
                     {operation.deprecated ? (
                         <span className="text-orange-500 font-bold">Deprecated </span>
                     ) : null}
-                    <span>{operation.summary || (operation.summary === undefined || operation.summary === '') ? operation.operationId : ''}</span>
+                    <span>{operation.description || operation.summary || operation.operationId || ''}</span>
                 </div>
             </div>
         </Link>

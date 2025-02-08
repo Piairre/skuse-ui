@@ -14,6 +14,8 @@ import { OpenAPIV3 } from 'openapi-types';
 import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 import SchemaViewer from './SchemaViewer';
 import CodeExamples from './CodeExamples';
+import ResponseViewer from './ResponseViewer';
+import ParametersViewer from './ParametersViewer';
 
 interface TabPanelProps {
     children: React.ReactNode;
@@ -97,107 +99,13 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
         </div>
     );
 
-    const renderParameters = () => {
-        const paramsByType = resolvedParameters.reduce((acc, param) => {
-            const type = param.in;
-            if (!acc[type]) acc[type] = [];
-            acc[type].push(param);
-            return acc;
-        }, {} as Record<string, OpenAPIV3.ParameterObject[]>);
-
-        return (
-            <div className="space-y-6">
-                {Object.entries(paramsByType).map(([type, params]) => (
-                    <div key={type} className="space-y-4">
-                        <h3 className="text-lg font-medium capitalize">{type} Parameters</h3>
-                        <div className="grid gap-4">
-                            {params.map(param => {
-                                const schema = param.schema
-                                    ? resolveReferences(param.schema, spec) as OpenAPIV3.SchemaObject
-                                    : null;
-
-                                return (
-                                    <div key={param.name} className="space-y-2 border-b pb-4 last:border-0">
-                                        <div className="flex items-center gap-2">
-                                            <Label htmlFor={param.name} className="font-medium">
-                                                {param.name}
-                                                {param.required && <span className="text-red-500 ml-1">*</span>}
-                                            </Label>
-                                            {schema?.type && (
-                                                <Badge variant="outline">{schema.type}</Badge>
-                                            )}
-                                            <Badge variant="outline" className="bg-slate-100">
-                                                {param.in}
-                                            </Badge>
-                                        </div>
-
-                                        {param.description && (
-                                            <div className="prose prose-sm prose-slate max-w-none">
-                                                <FormattedMarkdown markdown={param.description} />
-                                            </div>
-                                        )}
-
-                                        {param.example && (
-                                            <div className="text-sm text-gray-500">
-                                                Example: <code className="bg-slate-100 px-1 py-0.5 rounded">{param.example.toString()}</code>
-                                            </div>
-                                        )}
-
-                                        {schema?.enum ? (
-                                            <Select
-                                                value={requestValues.parameters[param.name]}
-                                                onValueChange={(value) =>
-                                                    setRequestValues(prev => ({
-                                                        ...prev,
-                                                        parameters: {
-                                                            ...prev.parameters,
-                                                            [param.name]: value
-                                                        }
-                                                    }))
-                                                }
-                                            >
-                                                <SelectTrigger className="w-full">
-                                                    <SelectValue placeholder="Select value" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {schema.enum.map(value => (
-                                                        <SelectItem key={String(value)} value={String(value)}>
-                                                            {String(value)}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        ) : (
-                                            <Input
-                                                id={param.name}
-                                                value={requestValues.parameters[param.name] || ''}
-                                                onChange={(e) =>
-                                                    setRequestValues(prev => ({
-                                                        ...prev,
-                                                        parameters: {
-                                                            ...prev.parameters,
-                                                            [param.name]: e.target.value
-                                                        }
-                                                    }))
-                                                }
-                                                placeholder={param.example?.toString()}
-                                            />
-                                        )}
-
-                                        {schema && (
-                                            <div className="mt-2 bg-slate-50 p-2 rounded">
-                                                <SchemaViewer schema={schema} />
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                ))}
-            </div>
-        );
-    };
+    const renderParameters = () => (
+        <ParametersViewer
+            parameters={resolvedParameters}
+            resolveReferences={(ref) => resolveReferences(ref, spec)}
+            spec={spec}
+        />
+    );
 
     const renderRequestBody = () => {
         if (!resolvedRequestBody) return null;
@@ -237,73 +145,13 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
         );
     };
 
-    const renderResponses = () => {
-        return (
-            <div className="space-y-6">
-                {Object.entries(resolvedResponses).map(([code, response]) => {
-                    const contentType = response.content
-                        ? Object.keys(response.content)[0]
-                        : null;
-                    const schema = contentType && response.content
-                        ? response.content[contentType]?.schema
-                        : null;
-                    const resolvedSchema = schema
-                        ? resolveReferences(schema, spec) as OpenAPIV3.SchemaObject
-                        : null;
-
-                    return (
-                        <div key={code} className="border rounded-lg p-4">
-                            <div className="flex items-center gap-2 mb-4">
-                                <Badge
-                                    variant="outline"
-                                    className={
-                                        code.startsWith('2') ? 'bg-green-100' :
-                                            code.startsWith('4') ? 'bg-orange-100' :
-                                                code.startsWith('5') ? 'bg-red-100' : ''
-                                    }
-                                >
-                                    {code}
-                                </Badge>
-                                <span className="font-medium">{response.description}</span>
-                            </div>
-
-                            {response.content && (
-                                <div className="space-y-4">
-                                    <div className="flex gap-2">
-                                        {Object.keys(response.content).map(type => (
-                                            <Badge key={type} variant="outline">
-                                                {type}
-                                            </Badge>
-                                        ))}
-                                    </div>
-
-                                    {resolvedSchema && (
-                                        <>
-                                            <div className="bg-slate-50 p-4 rounded-lg">
-                                                <h4 className="font-medium mb-2">Schema</h4>
-                                                <SchemaViewer schema={resolvedSchema} />
-                                            </div>
-
-                                            {resolvedSchema.example && (
-                                                <div className="bg-slate-50 p-4 rounded-lg">
-                                                    <h4 className="font-medium mb-2">Example</h4>
-                                                    <pre className="overflow-x-auto">
-                                                        <code>
-                                                            {JSON.stringify(resolvedSchema.example, null, 2)}
-                                                        </code>
-                                                    </pre>
-                                                </div>
-                                            )}
-                                        </>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    );
-                })}
-            </div>
-        );
-    };
+    const renderResponses = () => (
+        <ResponseViewer
+            responses={resolvedResponses}
+            resolveReferences={(ref) => resolveReferences(ref, spec)}
+            spec={spec}
+        />
+    );
 
     const renderSecurityInfo = () => {
         if (!operation.security) return null;
