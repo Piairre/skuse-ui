@@ -5,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronRight, ChevronDown } from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
+import { cn } from "@/lib/utils";
 
 interface ResponseViewerProps {
     responses: Record<string, OpenAPIV3.ResponseObject>;
@@ -12,11 +13,13 @@ interface ResponseViewerProps {
     spec: OpenAPIV3.Document;
 }
 
-const SchemaProperty: React.FC<{
+interface SchemaPropertyProps {
     name?: string;
     schema: OpenAPIV3.SchemaObject;
     required?: boolean;
-}> = ({ name, schema, required }) => {
+}
+
+const SchemaProperty: React.FC<SchemaPropertyProps> = ({ name, schema, required }) => {
     const [isOpen, setIsOpen] = React.useState(true);
     const hasChildren = schema.type === 'object' || schema.type === 'array';
 
@@ -89,18 +92,32 @@ const SchemaProperty: React.FC<{
 
 const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses, resolveReferences, spec }) => {
     if (!responses) return null;
+    const [activeTab, setActiveTab] = React.useState(Object.keys(responses)[0]);
 
-    const getStatusStyles = (code: string): string => {
-        if (code.startsWith('2')) {
-            return 'green';
-        }
-        if (code.startsWith('4')) {
-            return 'orange';
-        }
-        if (code.startsWith('5')) {
-            return 'red';
-        }
+    const getStatusColor = (code: string): string => {
+        if (code.startsWith('1')) return 'blue';
+        if (code.startsWith('2')) return 'green';
+        if (code.startsWith('3')) return 'yellow';
+        if (code.startsWith('4')) return 'orange';
+        if (code.startsWith('5')) return 'red';
         return 'gray';
+    };
+
+    const getStatusStyles = (code: string, isActive: boolean = false): string => {
+        const color = getStatusColor(code);
+        return cn(
+            "transition-colors",
+            isActive ? `bg-${color}-500 text-white font-semibold` : `text-${color}-600`,
+            `hover:bg-${color}-500 hover:text-white`,
+            `data-[state=active]:bg-${color}-500 data-[state=active]:text-white`
+        );
+    };
+
+    const getHeaderStyles = (code: string): string => {
+        if (code.startsWith('2')) return "bg-green-500 text-white";
+        if (code.startsWith('4')) return "bg-orange-500 text-white";
+        if (code.startsWith('5')) return "bg-red-500 text-white";
+        return "bg-gray-500 text-white";
     };
 
     const generateExample = (schema: OpenAPIV3.SchemaObject): any => {
@@ -133,13 +150,13 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses, resolveRefer
     };
 
     return (
-        <Tabs defaultValue={Object.keys(responses)[0]} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full justify-start gap-2 h-auto p-1">
                 {Object.entries(responses).map(([code]) => (
                     <TabsTrigger
                         key={code}
                         value={code}
-                        className={`transition-colors text-${getStatusStyles(code)}-600 bg-transparent hover:bg-${getStatusStyles(code)}-500 hover:text-white data-[state=active]:bg-${getStatusStyles(code)}-500 data-[state=active]:text-white data-[state=active]:font-semibold`}
+                        className={getStatusStyles(code, activeTab === code)}
                     >
                         {code}
                     </TabsTrigger>
@@ -153,8 +170,11 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses, resolveRefer
 
                 return (
                     <TabsContent key={code} value={code} className="mt-4">
-                        <div className={`text-lg text-center rounded p-1 my-1 font-semibold bg-${getStatusStyles(code)}-500 text-white`}>
-                            {code} - {resolvedResponse.description || 'No description'}
+                        <div className={cn(
+                            "text-lg text-center rounded p-1 my-1 font-semibold",
+                            getHeaderStyles(code)
+                        )}>
+                            {code} - {resolvedResponse.description || 'Response'}
                         </div>
 
                         {resolvedResponse.content && (
