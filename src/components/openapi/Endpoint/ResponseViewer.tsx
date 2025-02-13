@@ -7,8 +7,9 @@ import {ChevronDown, ChevronRight} from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
 
+// Types
 interface ResponseViewerProps {
-    responses: {[code: string]: | OpenAPIV3.ResponseObject}
+    responses: {[code: string]: OpenAPIV3.ResponseObject}
 }
 
 interface SchemaPropertyProps {
@@ -17,47 +18,74 @@ interface SchemaPropertyProps {
     required?: boolean;
 }
 
+// Configuration des statuts HTTP
+const STATUS_STYLES = {
+    '1': {
+        base: 'text-blue-600 dark:text-blue-400 hover:text-white data-[state=active]:text-white',
+        hover: 'hover:bg-blue-500 dark:text-white',
+        active: 'data-[state=active]:bg-blue-500 bg-blue-500 dark:text-white'
+    },
+    '2': {
+        base: 'text-green-600 dark:text-green-400 hover:text-white data-[state=active]:text-white',
+        hover: 'hover:bg-green-500 dark:text-white',
+        active: 'data-[state=active]:bg-green-500 bg-green-500 dark:text-white'
+    },
+    '3': {
+        base: 'text-yellow-600 dark:text-yellow-400 hover:text-white data-[state=active]:text-white',
+        hover: 'hover:bg-yellow-500 dark:text-white',
+        active: 'data-[state=active]:bg-yellow-500 bg-yellow-500 dark:text-white'
+    },
+    '4': {
+        base: 'text-orange-600 dark:text-orange-400 hover:text-white data-[state=active]:text-white',
+        hover: 'hover:bg-orange-500 dark:text-white',
+        active: 'data-[state=active]:bg-orange-500 bg-orange-500 dark:text-white'
+    },
+    '5': {
+        base: 'text-red-600 dark:text-red-400 hover:text-white data-[state=active]:text-white',
+        hover: 'hover:bg-red-500 dark:text-white',
+        active: 'data-[state=active]:bg-red-500 bg-red-500 dark:text-white'
+    }
+} as const;
+
+// Composant pour afficher une propriété du schéma
 const SchemaProperty: React.FC<SchemaPropertyProps> = ({ name, schema, required }) => {
     const [isOpen, setIsOpen] = React.useState(false);
+
     const isArrayOfObjects = schema.type === 'array' &&
         (schema.items as OpenAPIV3.SchemaObject).type === 'object';
+
     const hasChildren = (schema.type === 'object' && schema.properties) ||
-        (schema.type === 'array' && schema.items && (schema.items as OpenAPIV3.SchemaObject).properties);
+        (schema.type === 'array' && schema.items &&
+            (schema.items as OpenAPIV3.SchemaObject).properties);
 
     const renderType = () => {
         if (schema.type === 'array' && schema.items) {
             if ('$ref' in schema.items) {
                 return `${schema.items.$ref.split('/').pop()}[]`;
             }
-            return `${(schema.type)}[${(schema.items.title || schema.items.type) || ''}]`;
+            return `${schema.type}[${(schema.items as OpenAPIV3.SchemaObject).title ||
+            (schema.items as OpenAPIV3.SchemaObject).type || ''}]`;
         }
         return schema.type;
-    };
-
-    const renderPropertyName = () => {
-        if (!name) return null;
-        if (schema.type === 'array') {
-            return `${name}`;
-        }
-        return name;
     };
 
     return (
         <div className="py-1">
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <CollapsibleTrigger
-                    className="group flex items-start gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded"
-                >
+                <CollapsibleTrigger className="group flex items-start gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded">
                     {hasChildren && (
                         <div className="text-gray-500 dark:text-gray-400 mt-1">
-                            {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                            {isOpen ?
+                                <ChevronDown className="h-4 w-4" /> :
+                                <ChevronRight className="h-4 w-4" />
+                            }
                         </div>
                     )}
                     <div className="flex flex-col gap-1 text-left">
                         <div className="flex items-center gap-2">
-                            {renderPropertyName() && (
+                            {name && (
                                 <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                                    {renderPropertyName()}{schema.type === 'array' && '[]'}
+                                    {name}{schema.type === 'array' && '[]'}
                                 </span>
                             )}
                             <div className="flex flex-wrap gap-1">
@@ -65,12 +93,14 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({ name, schema, required 
                                     {renderType()}
                                 </Badge>
                                 {required && (
-                                    <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+                                    <Badge variant="outline"
+                                           className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
                                         required
                                     </Badge>
                                 )}
                                 {schema.format && (
-                                    <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                                    <Badge variant="outline"
+                                           className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
                                         {schema.format}
                                     </Badge>
                                 )}
@@ -84,17 +114,20 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({ name, schema, required 
                         )}
                     </div>
                 </CollapsibleTrigger>
+
                 <CollapsibleContent className="ml-6">
                     {isArrayOfObjects ? (
                         <div className="space-y-1 mt-2">
-                            {Object.entries((schema.items as OpenAPIV3.SchemaObject).properties || {}).map(([propName, propSchema]) => (
-                                <SchemaProperty
-                                    key={propName}
-                                    name={propName}
-                                    schema={propSchema as OpenAPIV3.SchemaObject}
-                                    required={(schema.items as OpenAPIV3.SchemaObject).required?.includes(propName)}
-                                />
-                            ))}
+                            {Object.entries((schema.items as OpenAPIV3.SchemaObject).properties || {})
+                                .map(([propName, propSchema]) => (
+                                    <SchemaProperty
+                                        key={propName}
+                                        name={propName}
+                                        schema={propSchema as OpenAPIV3.SchemaObject}
+                                        required={(schema.items as OpenAPIV3.SchemaObject)
+                                            .required?.includes(propName)}
+                                    />
+                                ))}
                         </div>
                     ) : (
                         <>
@@ -110,11 +143,14 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({ name, schema, required 
                                     ))}
                                 </div>
                             )}
-                            {schema.type === 'array'&& schema.items && (schema.items as OpenAPIV3.SchemaObject).properties && (
-                                <div className="mt-2">
-                                    <SchemaProperty schema={schema.items as OpenAPIV3.SchemaObject}/>
-                                </div>
-                            )}
+                            {schema.type === 'array' && schema.items &&
+                                (schema.items as OpenAPIV3.SchemaObject).properties && (
+                                    <div className="mt-2">
+                                        <SchemaProperty
+                                            schema={schema.items as OpenAPIV3.SchemaObject}
+                                        />
+                                    </div>
+                                )}
                         </>
                     )}
                 </CollapsibleContent>
@@ -123,125 +159,135 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({ name, schema, required 
     );
 };
 
-const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
-    if (!responses) return null;
-    const [activeTab, setActiveTab] = React.useState(Object.keys(responses)[0]);
+// Composant pour l'onglet de statut
+const StatusTab: React.FC<{
+    code: string;
+    isActive: boolean;
+    onClick: () => void;
+}> = ({ code, isActive, onClick }) => {
+    const statusType = code.charAt(0) as keyof typeof STATUS_STYLES;
+    const styles = STATUS_STYLES[statusType] ?? STATUS_STYLES['5'];
 
-    const getStatusColor = (code: string): string => {
-        if (code.startsWith('1')) return 'blue';
-        if (code.startsWith('2')) return 'green';
-        if (code.startsWith('3')) return 'yellow';
-        if (code.startsWith('4')) return 'orange';
-        if (code.startsWith('5')) return 'red';
-        return 'gray';
-    };
+    return (
+        <TabsTrigger
+            value={code}
+            className={cn(
+                "transition-colors font-medium",
+                styles.base,
+                styles.hover,
+                isActive && styles.active
+            )}
+            onClick={onClick}
+        >
+            {code}
+        </TabsTrigger>
+    );
+};
 
-    const getStatusStyles = (code: string, isActive: boolean = false): string => {
-        const color = getStatusColor(code);
-        return cn(
-            "transition-colors",
-            isActive ? `bg-${color}-500 text-white font-semibold` : `text-${color}-600 dark:text-${color}-400`,
-            `hover:bg-${color}-500 hover:text-white`,
-            `data-[state=active]:bg-${color}-500 data-[state=active]:text-white`
-        );
-    };
-
+// Composant pour l'affichage du schéma
+const SchemaViewer: React.FC<{
+    schema: OpenAPIV3.SchemaObject;
+    contentType: string;
+    description?: string;
+}> = ({ schema, description }) => {
     const generateExample = (schema: OpenAPIV3.SchemaObject): any => {
         if (schema.example) return schema.example;
 
         if (schema.type === 'object' && schema.properties) {
-            const example: Record<string, any> = {};
-            Object.entries(schema.properties).forEach(([key, prop]) => {
-                example[key] = generateExample(prop as OpenAPIV3.SchemaObject);
-            });
-            return example;
+            return Object.fromEntries(
+                Object.entries(schema.properties).map(([key, prop]) => [
+                    key,
+                    generateExample(prop as OpenAPIV3.SchemaObject)
+                ])
+            );
         }
 
         if (schema.type === 'array' && schema.items) {
             return [generateExample(schema.items as OpenAPIV3.SchemaObject)];
         }
 
-        switch (schema.type) {
-            case 'string':
-                return schema.format === 'date-time' ? new Date().toISOString() : 'string';
-            case 'number':
-                return 0;
-            case 'integer':
-                return 0;
-            case 'boolean':
-                return true;
-            default:
-                return null;
-        }
+        const defaultValues = {
+            string: schema.format === 'date-time' ? new Date().toISOString() : 'string',
+            number: 0,
+            integer: 0,
+            boolean: true
+        };
+
+        return defaultValues[schema.type as keyof typeof defaultValues] ?? null;
     };
+
+    return (
+        <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-2">
+                <h3 className="text-base font-medium dark:text-gray-100">
+                    <FormattedMarkdown markdown={description || ''} />
+                </h3>
+                <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 space-y-1">
+                    {schema.type === 'object' && schema.properties ? (
+                        Object.entries(schema.properties).map(([propName, propSchema]) => (
+                            <SchemaProperty
+                                key={propName}
+                                name={propName}
+                                schema={propSchema as OpenAPIV3.SchemaObject}
+                                required={schema.required?.includes(propName)}
+                            />
+                        ))
+                    ) : (
+                        <SchemaProperty schema={schema} />
+                    )}
+                </div>
+            </div>
+
+            <div className="space-y-2">
+                <h3 className="text-base font-medium dark:text-gray-100">Example Response</h3>
+                <div>
+                    <FormattedMarkdown
+                        markdown={`\`\`\`json\n${JSON.stringify(
+                            schema?.example || generateExample(schema),
+                            null,
+                            2
+                        )}\n\`\`\``}
+                        className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
+                    />
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// Composant principal
+const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
+    if (!responses) return null;
+    const [activeTab, setActiveTab] = React.useState(Object.keys(responses)[0]);
 
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="w-full justify-start gap-2 h-auto p-1 bg-transparent dark:bg-transparent">
                 {Object.entries(responses).map(([code]) => (
-                    <TabsTrigger
+                    <StatusTab
                         key={code}
-                        value={code}
-                        className={getStatusStyles(code, activeTab === code)}
-                    >
-                        {code}
-                    </TabsTrigger>
+                        code={code}
+                        isActive={activeTab === code}
+                        onClick={() => setActiveTab(code)}
+                    />
                 ))}
             </TabsList>
 
             {Object.entries(responses).map(([code, response]) => {
+                if (!response.content) return null;
+                const contentType = Object.keys(response.content)[0];
+                if (!contentType) return null;
+
+                const content = response.content[contentType];
+                const schema = content?.schema as OpenAPIV3.SchemaObject;
+
                 return (
                     <TabsContent key={code} value={code} className="mt-4">
-                        {response.content && (
-                            <div className="grid grid-cols-1 gap-6">
-                                {(() => {
-                                    const contentType = Object.keys(response.content)[0];
-                                    if (!contentType) return null;
-
-                                    const content = response.content[contentType];
-                                    const schema = content?.schema as OpenAPIV3.SchemaObject;
-
-                                    return (
-                                        <>
-                                            <div className="space-y-2">
-                                                <h3 className="text-base font-medium dark:text-gray-100">
-                                                    <FormattedMarkdown markdown={response.description} />
-                                                </h3>
-                                                <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 space-y-1">
-                                                    {schema.type === 'object' && schema.properties &&
-                                                        Object.entries(schema.properties).map(([propName, propSchema]) => (
-                                                            <SchemaProperty
-                                                                key={propName}
-                                                                name={propName}
-                                                                schema={propSchema as OpenAPIV3.SchemaObject}
-                                                                required={schema.required?.includes(propName)}
-                                                            />
-                                                        ))
-                                                    }
-                                                    {((schema.type === 'array') || schema.type !== 'object') &&
-                                                        <SchemaProperty schema={schema} />
-                                                    }
-                                                </div>
-                                            </div>
-
-                                            <div className="space-y-2">
-                                                <h3 className="text-base font-medium dark:text-gray-100">Example Response</h3>
-                                                <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
-                                                    <FormattedMarkdown
-                                                        markdown={`\`\`\`json\n${JSON.stringify(
-                                                            content?.example || schema?.example || (schema ? generateExample(schema) : {}),
-                                                            null,
-                                                            2
-                                                        )}\n\`\`\``}
-                                                        className="[&_code]:!whitespace-pre-wrap text-sm"
-                                                    />
-                                                </div>
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </div>
-                        )}
+                        <SchemaViewer
+                            schema={schema}
+                            contentType={contentType}
+                            description={response.description}
+                        />
                     </TabsContent>
                 );
             })}
