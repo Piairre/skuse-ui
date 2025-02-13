@@ -20,7 +20,7 @@ interface EndpointParams {
 const rootRoute = new RootRoute({
     // See examples to test doc : https://apis.guru/
     component: () => {
-        return <SkuseDocumentation openApiUrl={"https://api.fiddy.app/public/doc.json"} />;
+        return <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/bunq.com/1.0/openapi.json"} />;
     }
 });
 

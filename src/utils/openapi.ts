@@ -13,9 +13,6 @@ const isReference = (obj: any): obj is Reference => {
     return obj && typeof obj === 'object' && '$ref' in obj;
 };
 
-/**
- * Fusionne récursivement deux objets en gérant les cas spéciaux OpenAPI
- */
 const mergeObjects = (obj1: any, obj2: any): any => {
     if (!obj1 || typeof obj1 !== 'object') return obj2;
     if (!obj2 || typeof obj2 !== 'object') return obj1;
@@ -24,28 +21,22 @@ const mergeObjects = (obj1: any, obj2: any): any => {
 
     for (const [key, value2] of Object.entries(obj2)) {
         if (key === 'required' && Array.isArray(value2) && Array.isArray(result[key])) {
-            // Fusion des tableaux required en évitant les doublons
             result[key] = Array.from(new Set([...result[key], ...value2]));
         } else if (key === 'properties' && typeof value2 === 'object' && typeof result[key] === 'object') {
-            // Fusion récursive des properties
             result[key] = mergeObjects(result[key], value2);
         } else if (key === 'items' && typeof value2 === 'object') {
-            // Fusion spéciale pour les items de tableaux
             result[key] = result[key] && Object.keys(result[key]).length > 0
                 ? mergeObjects(result[key], value2)
                 : value2;
         } else if (Array.isArray(value2)) {
-            // Fusion des tableaux normaux
             result[key] = Array.isArray(result[key])
                 ? [...result[key], ...value2]
                 : value2;
         } else if (typeof value2 === 'object') {
-            // Fusion récursive des objets
             result[key] = result.hasOwnProperty(key)
                 ? mergeObjects(result[key], value2)
                 : value2;
         } else {
-            // Remplacement simple pour les valeurs primitives
             result[key] = value2;
         }
     }
@@ -53,9 +44,6 @@ const mergeObjects = (obj1: any, obj2: any): any => {
     return result;
 };
 
-/**
- * Résout une référence dans un document OpenAPI
- */
 const resolveReference = (ref: string, document: OpenAPIV3.Document): any => {
     const parts = ref.split('/').slice(1);
     let current: any = document;
@@ -71,9 +59,6 @@ const resolveReference = (ref: string, document: OpenAPIV3.Document): any => {
     return current;
 };
 
-/**
- * Résout un schéma allOf en fusionnant tous ses sous-schémas
- */
 const resolveAllOf = (schema: any, document: OpenAPIV3.Document, visited: Set<string>): any => {
     if (!schema.allOf || !Array.isArray(schema.allOf)) {
         return schema;
@@ -83,13 +68,11 @@ const resolveAllOf = (schema: any, document: OpenAPIV3.Document, visited: Set<st
         resolveReferences(subSchema, document, visited)
     );
 
-    // Fusion de tous les sous-schémas
     const mergedSchema = resolvedSchemas.reduce((acc, current) =>
             mergeObjects(acc, current),
         {}
     );
 
-    // Supprime la propriété allOf et fusionne le reste du schéma
     const { allOf, ...restSchema } = schema;
     return mergeObjects(mergedSchema, restSchema);
 };
@@ -101,25 +84,21 @@ const resolveReferences = (obj: any, document: OpenAPIV3.Document, visited = new
 
     // Si c'est une référence
     if (isReference(obj)) {
-        if (visited.has(obj.$ref)) {
-            throw new Error(`Circular reference detected: ${obj.$ref}`);
+        if (!visited.has(obj.$ref)) {
+            visited.add(obj.$ref);
+            const resolved = resolveReference(obj.$ref, document);
+            return resolveReferences(resolved, document, visited);
         }
-        visited.add(obj.$ref);
-        const resolved = resolveReference(obj.$ref, document);
-        return resolveReferences(resolved, document, visited);
     }
 
-    // Si c'est un schéma avec allOf
     if (obj.allOf) {
         return resolveAllOf(obj, document, visited);
     }
 
-    // Si c'est un tableau
     if (Array.isArray(obj)) {
         return obj.map(item => resolveReferences(item, document, new Set(visited)));
     }
 
-    // Si c'est un objet
     const result: any = {};
     for (const [key, value] of Object.entries(obj)) {
         result[key] = resolveReferences(value, document, new Set(visited));
@@ -131,12 +110,10 @@ const resolveReferences = (obj: any, document: OpenAPIV3.Document, visited = new
 const resolveOpenAPIDocument = (document: OpenAPIV3.Document): OpenAPIV3.Document => {
     const documentCopy = JSON.parse(JSON.stringify(document));
 
-    // Résout les références dans paths
     if (documentCopy.paths) {
         documentCopy.paths = resolveReferences(documentCopy.paths, document);
     }
 
-    // Résout les références dans components
     if (documentCopy.components) {
         documentCopy.components = resolveReferences(documentCopy.components, document);
     }
