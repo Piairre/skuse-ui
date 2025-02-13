@@ -1,8 +1,148 @@
 import { OpenAPIV3 } from 'openapi-types';
 import { EnhancedOperationObject, TaggedOperationsMap } from '@/types/openapi';
-import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 
-const validHttpMethods = new Set<OpenAPIV3.HttpMethods>(Object.values(OpenAPIV3.HttpMethods));
+const validHttpMethods = new Set<OpenAPIV3.HttpMethods>(
+    Object.values(OpenAPIV3.HttpMethods)
+);
+
+type Reference = {
+    $ref: string;
+};
+
+const isReference = (obj: any): obj is Reference => {
+    return obj && typeof obj === 'object' && '$ref' in obj;
+};
+
+/**
+ * Fusionne récursivement deux objets en gérant les cas spéciaux OpenAPI
+ */
+const mergeObjects = (obj1: any, obj2: any): any => {
+    if (!obj1 || typeof obj1 !== 'object') return obj2;
+    if (!obj2 || typeof obj2 !== 'object') return obj1;
+
+    const result: any = { ...obj1 };
+
+    for (const [key, value2] of Object.entries(obj2)) {
+        if (key === 'required' && Array.isArray(value2) && Array.isArray(result[key])) {
+            // Fusion des tableaux required en évitant les doublons
+            result[key] = Array.from(new Set([...result[key], ...value2]));
+        } else if (key === 'properties' && typeof value2 === 'object' && typeof result[key] === 'object') {
+            // Fusion récursive des properties
+            result[key] = mergeObjects(result[key], value2);
+        } else if (key === 'items' && typeof value2 === 'object') {
+            // Fusion spéciale pour les items de tableaux
+            result[key] = result[key] && Object.keys(result[key]).length > 0
+                ? mergeObjects(result[key], value2)
+                : value2;
+        } else if (Array.isArray(value2)) {
+            // Fusion des tableaux normaux
+            result[key] = Array.isArray(result[key])
+                ? [...result[key], ...value2]
+                : value2;
+        } else if (typeof value2 === 'object') {
+            // Fusion récursive des objets
+            result[key] = result.hasOwnProperty(key)
+                ? mergeObjects(result[key], value2)
+                : value2;
+        } else {
+            // Remplacement simple pour les valeurs primitives
+            result[key] = value2;
+        }
+    }
+
+    return result;
+};
+
+/**
+ * Résout une référence dans un document OpenAPI
+ */
+const resolveReference = (ref: string, document: OpenAPIV3.Document): any => {
+    const parts = ref.split('/').slice(1);
+    let current: any = document;
+
+    for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+            current = current[part];
+        } else {
+            throw new Error(`Invalid reference: ${ref}`);
+        }
+    }
+
+    return current;
+};
+
+/**
+ * Résout un schéma allOf en fusionnant tous ses sous-schémas
+ */
+const resolveAllOf = (schema: any, document: OpenAPIV3.Document, visited: Set<string>): any => {
+    if (!schema.allOf || !Array.isArray(schema.allOf)) {
+        return schema;
+    }
+
+    const resolvedSchemas = schema.allOf.map(subSchema =>
+        resolveReferences(subSchema, document, visited)
+    );
+
+    // Fusion de tous les sous-schémas
+    const mergedSchema = resolvedSchemas.reduce((acc, current) =>
+            mergeObjects(acc, current),
+        {}
+    );
+
+    // Supprime la propriété allOf et fusionne le reste du schéma
+    const { allOf, ...restSchema } = schema;
+    return mergeObjects(mergedSchema, restSchema);
+};
+
+const resolveReferences = (obj: any, document: OpenAPIV3.Document, visited = new Set<string>()): any => {
+    if (!obj || typeof obj !== 'object') {
+        return obj;
+    }
+
+    // Si c'est une référence
+    if (isReference(obj)) {
+        if (visited.has(obj.$ref)) {
+            throw new Error(`Circular reference detected: ${obj.$ref}`);
+        }
+        visited.add(obj.$ref);
+        const resolved = resolveReference(obj.$ref, document);
+        return resolveReferences(resolved, document, visited);
+    }
+
+    // Si c'est un schéma avec allOf
+    if (obj.allOf) {
+        return resolveAllOf(obj, document, visited);
+    }
+
+    // Si c'est un tableau
+    if (Array.isArray(obj)) {
+        return obj.map(item => resolveReferences(item, document, new Set(visited)));
+    }
+
+    // Si c'est un objet
+    const result: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+        result[key] = resolveReferences(value, document, new Set(visited));
+    }
+
+    return result;
+};
+
+const resolveOpenAPIDocument = (document: OpenAPIV3.Document): OpenAPIV3.Document => {
+    const documentCopy = JSON.parse(JSON.stringify(document));
+
+    // Résout les références dans paths
+    if (documentCopy.paths) {
+        documentCopy.paths = resolveReferences(documentCopy.paths, document);
+    }
+
+    // Résout les références dans components
+    if (documentCopy.components) {
+        documentCopy.components = resolveReferences(documentCopy.components, document);
+    }
+
+    return documentCopy;
+};
 
 function isValidHttpMethod(method: string): method is OpenAPIV3.HttpMethods {
     return validHttpMethods.has(method.toLowerCase() as OpenAPIV3.HttpMethods);
@@ -11,8 +151,13 @@ function isValidHttpMethod(method: string): method is OpenAPIV3.HttpMethods {
 function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
     const tagMap: TaggedOperationsMap = {};
 
-    function pushToTag(tag: string | undefined, operation: OpenAPIV3.OperationObject, path: string, method: string) {
-        const normalizedTag = tag || 'null';
+    function pushToTag(
+        tag: string | undefined,
+        operation: OpenAPIV3.OperationObject,
+        path: string,
+        method: string
+    ): void {
+        const normalizedTag = tag || 'default';
         if (!tagMap[normalizedTag]) {
             tagMap[normalizedTag] = [];
         }
@@ -31,10 +176,7 @@ function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap
             Object.entries(pathItem).forEach(([method, operation]) => {
                 if (isValidHttpMethod(method)) {
                     const typedOperation = operation as OpenAPIV3.OperationObject;
-                    const tag = typedOperation.tags && typedOperation.tags.length > 0
-                        ? typedOperation.tags[0]
-                        : 'null';
-
+                    const tag = typedOperation.tags?.[0] || 'default';
                     pushToTag(tag, typedOperation, path, method);
                 }
             });
@@ -45,18 +187,16 @@ function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap
 }
 
 function findOperationByOperationIdAndTag(
+    spec: OpenAPIV3.Document,
     operationId: string,
     tag?: string
 ): EnhancedOperationObject | null {
-    const spec = useOpenAPIContext().spec;
+    if (!spec?.paths) return null;
 
-    if (!spec) return null;
+    const groupedEndpoints = groupEndpointsByTags(spec.paths);
+    const tagEndpoints = groupedEndpoints[tag || 'default'];
 
-    const groupedEndpointsByTag = groupEndpointsByTags(spec.paths as Record<string, OpenAPIV3.PathItemObject>);
-
-    const tagEndpoints = groupedEndpointsByTag[tag || 'null'];
     if (!tagEndpoints) return null;
-
     return tagEndpoints.find(endpoint => endpoint.operationId === operationId) || null;
 }
 
@@ -75,154 +215,10 @@ function getBadgeColor(httpMethod: string): string {
     return httpMethodColors[httpMethod.toLowerCase() as OpenAPIV3.HttpMethods] || 'bg-gray-500';
 }
 
-// Types plus précis pour les références
-interface ReferenceObject {
-    $ref: string;
-}
-
-function isReferenceObject(obj: unknown): obj is ReferenceObject {
-    return obj !== null && typeof obj === 'object' && '$ref' in obj;
-}
-
-type SchemaObjectWithoutRef = Omit<OpenAPIV3.SchemaObject, '$ref'>;
-
-type ResolvedType<T> = T extends ReferenceObject
-    ? SchemaObjectWithoutRef
-    : T extends Array<infer U>
-        ? Array<ResolvedType<U>>
-        : T extends OpenAPIV3.SchemaObject
-            ? SchemaObjectWithoutRef & {
-            allOf?: ResolvedType<OpenAPIV3.SchemaObject>[];
-            oneOf?: ResolvedType<OpenAPIV3.SchemaObject>[];
-            anyOf?: ResolvedType<OpenAPIV3.SchemaObject>[];
-        }
-            : T;
-
-function resolveReference<T>(
-    obj: T,
-    rootDocument: OpenAPIV3.Document,
-    visited: Set<string> = new Set()
-): ResolvedType<T> {
-    if (!isReferenceObject(obj)) {
-        return obj as ResolvedType<T>;
-    }
-
-    if (visited.has(obj.$ref)) {
-        throw new Error(`Circular reference detected: ${obj.$ref}`);
-    }
-
-    visited.add(obj.$ref);
-    const refPath = obj.$ref.split('/').slice(1);
-    let current: unknown = rootDocument;
-
-    try {
-        for (const pathPart of refPath) {
-            if (current && typeof current === 'object' && pathPart in current) {
-                current = (current as Record<string, unknown>)[pathPart];
-            } else {
-                throw new Error(`Invalid reference path: ${obj.$ref}`);
-            }
-        }
-    } catch (error) {
-        throw new Error(`Can't resolve reference: ${obj.$ref}`);
-    }
-
-    if (current === undefined) {
-        throw new Error(`Reference not found: ${obj.$ref}`);
-    }
-
-    return resolveReference(current as T, rootDocument, visited);
-}
-
-function resolveReferences<T>(
-    obj: T,
-    rootDocument: OpenAPIV3.Document
-): ResolvedType<T> {
-    if (obj === null || typeof obj !== 'object') {
-        return obj as ResolvedType<T>;
-    }
-
-    if (isReferenceObject(obj)) {
-        return resolveReference(obj, rootDocument);
-    }
-
-    if (Array.isArray(obj)) {
-        return obj.map(item => resolveReferences(item, rootDocument)) as ResolvedType<T>;
-    }
-
-    const schemaObj = obj as OpenAPIV3.SchemaObject;
-    const resolvedObj = { ...schemaObj } as ResolvedType<T>;
-
-    if ('allOf' in obj && Array.isArray(obj.allOf)) {
-        const resolvedAllOf = obj.allOf.map(schema =>
-            resolveReferences(schema, rootDocument)
-        );
-
-        // Si tous les schémas sont résolus (pas de références), on les fusionne
-        if (resolvedAllOf.every(schema => !isReferenceObject(schema))) {
-            const mergedSchema = mergeAllOfSchemas(resolvedAllOf);
-            return mergedSchema as ResolvedType<T>;
-        } else {
-            // Sinon on garde allOf avec les schémas résolus
-            (resolvedObj as OpenAPIV3.SchemaObject).allOf = resolvedAllOf;
-        }
-    }
-
-    if ('oneOf' in obj && Array.isArray(obj.oneOf)) {
-        (resolvedObj as OpenAPIV3.SchemaObject).oneOf = obj.oneOf.map(schema =>
-            resolveReferences(schema, rootDocument)
-        );
-    }
-
-    if ('anyOf' in obj && Array.isArray(obj.anyOf)) {
-        (resolvedObj as OpenAPIV3.SchemaObject).anyOf = obj.anyOf.map(schema =>
-            resolveReferences(schema, rootDocument)
-        );
-    }
-
-    // Résoudre les propriétés restantes
-    for (const [key, value] of Object.entries(obj)) {
-        if (!['allOf', 'oneOf', 'anyOf'].includes(key)) {
-            (resolvedObj as Record<string, unknown>)[key] = resolveReferences(value, rootDocument);
-        }
-    }
-
-    return resolvedObj;
-}
-
-function mergeAllOfSchemas(schemas: OpenAPIV3.SchemaObject[]): OpenAPIV3.SchemaObject {
-    const baseSchema: OpenAPIV3.SchemaObject = {
-        type: 'object',
-        properties: {},
-        required: []
-    };
-
-    return schemas.reduce<OpenAPIV3.SchemaObject>((merged, current) => {
-        const mergedSchema: OpenAPIV3.SchemaObject = {
-            ...merged,
-            properties: {
-                ...(merged.properties || {}),
-                ...(current.properties || {})
-            },
-            required: [...(merged.required || []), ...(current.required || [])]
-        };
-
-        if (current.type) {
-            mergedSchema.type = current.type;
-        }
-
-        return mergedSchema;
-    }, baseSchema);
-}
-
 export {
+    resolveOpenAPIDocument,
     groupEndpointsByTags,
     findOperationByOperationIdAndTag,
     getBadgeColor,
-    resolveReference,
-    resolveReferences,
-    mergeAllOfSchemas,
-    isReferenceObject,
-    type ReferenceObject,
-    type ResolvedType
+    isValidHttpMethod
 };

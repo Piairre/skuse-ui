@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { OpenAPIV3 } from 'openapi-types';
 import { useOpenAPIContext } from './OpenAPIContext';
+import {resolveOpenAPIDocument} from "@/utils/openapi";
 
 export function useSpec({ openApiUrl }: { openApiUrl: string }) {
     const {
@@ -22,8 +23,10 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
                     throw new Error(`HTTP error ! Status: ${response.status}`);
                 }
 
-                const swaggerDoc: OpenAPIV3.Document = await response.json();
-                setSpec(swaggerDoc);
+                const spec: OpenAPIV3.Document = await response.json();
+                const resolvedSpec = resolveOpenAPIDocument(spec);
+
+                setSpec(resolvedSpec);
             } catch (err) {
                 setError(err instanceof Error ? err : new Error('An error occurred while fetching the Swagger documentation'));
             } finally {

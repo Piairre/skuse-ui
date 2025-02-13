@@ -3,7 +3,7 @@ import { OpenAPIV3 } from 'openapi-types';
 
 interface OpenAPIContextType {
     spec: OpenAPIV3.Document | null;
-    setSpec: (spec: OpenAPIV3.Document | null) => void;
+    setSpec: (spec: OpenAPIV3.Document) => void;
     loading: boolean;
     setLoading: (loading: boolean) => void;
     error: Error | null;

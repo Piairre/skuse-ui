@@ -3,14 +3,14 @@ import { OpenAPIV3 } from 'openapi-types';
 import { Badge } from "@/components/ui/badge";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import SchemaViewer from "./SchemaViewer";
+import SchemaObject = OpenAPIV3.SchemaObject;
 
 interface ParametersViewerProps {
     parameters: OpenAPIV3.ParameterObject[];
-    resolveReferences: (ref: any, spec: OpenAPIV3.Document) => any;
     spec: OpenAPIV3.Document;
 }
 
-const ParametersViewer: React.FC<ParametersViewerProps> = ({ parameters, resolveReferences, spec }) => {
+const ParametersViewer: React.FC<ParametersViewerProps> = ({ parameters }) => {
     const paramsByType = parameters.reduce((acc, param) => {
         const type = param.in;
         if (!acc[type]) acc[type] = [];
@@ -25,9 +25,7 @@ const ParametersViewer: React.FC<ParametersViewerProps> = ({ parameters, resolve
                     <h3 className="text-lg font-medium capitalize">{type} Parameters</h3>
                     <div className="space-y-6">
                         {params.map(param => {
-                            const schema = param.schema
-                                ? resolveReferences(param.schema, spec) as OpenAPIV3.SchemaObject
-                                : null;
+                            const schema = param.schema as SchemaObject;
 
                             return (
                                 <div key={param.name} className="space-y-2 border-b pb-4 last:border-0">

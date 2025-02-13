@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { EnhancedOperationObject } from "@/types/openapi";
-import { getBadgeColor, resolveReferences } from "@/utils/openapi";
+import { getBadgeColor } from "@/utils/openapi";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { PlayCircle, FileJson, Database, Info, Lock } from 'lucide-react';
 import { OpenAPIV3 } from 'openapi-types';
@@ -16,6 +14,7 @@ import SchemaViewer from './SchemaViewer';
 import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
+import ParameterObject = OpenAPIV3.ParameterObject;
 
 interface TabPanelProps {
     children: React.ReactNode;
@@ -31,7 +30,7 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, className = "" }) => (
 const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ operation }) => {
     const spec = useOpenAPIContext().spec as OpenAPIV3.Document;
     const [activeTab, setActiveTab] = useState('info');
-    const [requestValues, setRequestValues] = useState<{
+    const [requestValues] = useState<{
         parameters: Record<string, string>;
         body: string;
     }>({
@@ -40,18 +39,9 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
     });
 
     // Résolution des références
-    const resolvedParameters = operation.parameters
-        ? resolveReferences(operation.parameters, spec) as OpenAPIV3.ParameterObject[]
-        : [];
-    const resolvedRequestBody = operation.requestBody
-        ? resolveReferences(operation.requestBody, spec) as OpenAPIV3.RequestBodyObject
-        : null;
-    const resolvedResponses = operation.responses
-        ? Object.entries(operation.responses).reduce((acc, [code, response]) => {
-            acc[code] = resolveReferences(response, spec) as OpenAPIV3.ResponseObject;
-            return acc;
-        }, {} as Record<string, OpenAPIV3.ResponseObject>)
-        : {};
+    const parameters = operation.parameters as ParameterObject[] ?? [];
+    const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject || null;
+    const responses = operation.responses as {[code: string]: | OpenAPIV3.ResponseObject};
 
     const serverUrl = spec.servers?.[0]?.url || 'https://api.example.com';
 
@@ -101,40 +91,36 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
 
     const renderParameters = () => (
         <ParametersViewer
-            parameters={resolvedParameters}
-            resolveReferences={(ref) => resolveReferences(ref, spec)}
+            parameters={parameters}
             spec={spec}
         />
     );
 
     const renderRequestBody = () => {
-        if (!resolvedRequestBody) return null;
+        if (!requestBody) return null;
 
-        const contentType = Object.keys(resolvedRequestBody.content)[0] || 'application/json';
-        const schema = resolvedRequestBody.content[contentType]?.schema;
-        const resolvedSchema = schema
-            ? resolveReferences(schema, spec) as OpenAPIV3.SchemaObject
-            : null;
+        const contentType = Object.keys(requestBody.content)[0] || 'application/json';
+        const schema = requestBody.content[contentType]?.schema as OpenAPIV3.SchemaObject;
 
         return (
             <div className="space-y-6">
                 <div className="flex items-center gap-2">
                     <Badge variant="outline">{contentType}</Badge>
-                    {resolvedRequestBody.required && (
+                    {requestBody.required && (
                         <Badge variant="outline" className="bg-red-50">Required</Badge>
                     )}
                 </div>
 
-                {resolvedRequestBody.description && (
+                {requestBody.description && (
                     <div className="prose prose-slate max-w-none">
-                        <FormattedMarkdown markdown={resolvedRequestBody.description} />
+                        <FormattedMarkdown markdown={requestBody.description} />
                     </div>
                 )}
 
-                {resolvedSchema && (
+                {schema && (
                     <div className="bg-slate-50 p-4 rounded-lg">
                         <h4 className="font-medium mb-2">Schema</h4>
-                        <SchemaViewer schema={resolvedSchema} />
+                        <SchemaViewer schema={schema} />
                     </div>
                 )}
 
@@ -146,11 +132,7 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
     };
 
     const renderResponses = () => (
-        <ResponseViewer
-            responses={resolvedResponses}
-            resolveReferences={(ref) => resolveReferences(ref, spec)}
-            spec={spec}
-        />
+        <ResponseViewer responses={responses}/>
     );
 
     const renderSecurityInfo = () => {
@@ -200,7 +182,7 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                                 <Database className="w-4 h-4" />
                                 Parameters
                             </TabsTrigger>
-                            {resolvedRequestBody && (
+                            {requestBody && (
                                 <TabsTrigger value="body" className="flex items-center gap-2">
                                     <FileJson className="w-4 h-4" />
                                     Request Body
@@ -224,7 +206,7 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                                 <TabPanel>{renderParameters()}</TabPanel>
                             </TabsContent>
 
-                            {resolvedRequestBody && (
+                            {requestBody && (
                                 <TabsContent value="body">
                                     <TabPanel>{renderRequestBody()}</TabPanel>
                                 </TabsContent>
@@ -249,7 +231,7 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                                 ...(operation.security ? {
                                     'Authorization': 'Bearer YOUR_API_KEY'
                                 } : {}),
-                                ...(resolvedRequestBody ? {
+                                ...(requestBody ? {
                                     'Content-Type': 'application/json'
                                 } : {})
                             }}

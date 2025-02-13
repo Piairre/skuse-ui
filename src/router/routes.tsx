@@ -1,13 +1,16 @@
 import {
     Route,
     RootRoute,
-    Router, useNavigate
+    Router
 } from '@tanstack/react-router';
 import Information from '@/components/openapi/Information';
 import {SkuseDocumentation} from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import { findOperationByOperationIdAndTag } from '@/utils/openapi';
 import {EnhancedOperationObject} from "@/types/openapi";
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
+import {OpenAPIV3} from "openapi-types";
+import Document = OpenAPIV3.Document;
 
 interface EndpointParams {
     tag?: string;
@@ -35,8 +38,9 @@ const endpointRoute = new Route({
     path: '/$tag/$operationId',
     component: () => {
         const { tag, operationId } = endpointRoute.useParams();
+        const spec = useOpenAPIContext().spec as Document;
 
-        let operation = findOperationByOperationIdAndTag(operationId, tag);
+        let operation = findOperationByOperationIdAndTag(spec, operationId, tag);
 
         // TODO: Add a 404 page if operation is not found
         return <EndpointDetails operation={operation as EnhancedOperationObject} />;
@@ -49,7 +53,8 @@ const endpointRouteUntagged = new Route({
     component: () => {
         const { operationId }: EndpointParams = endpointRouteUntagged.useParams();
 
-        let operation = findOperationByOperationIdAndTag(operationId);
+        const spec = useOpenAPIContext().spec as Document;
+        let operation = findOperationByOperationIdAndTag(spec, operationId);
 
         // TODO: Add a 404 page if operation is not found
         return <EndpointDetails operation={operation as EnhancedOperationObject} />;

@@ -99,7 +99,7 @@ export default function FormattedMarkdown({markdown, className, style}: Markdown
                         }
                     ]
                 ]}
-                style={style}
+                style={{backgroundColor: 'transparent', ...style}}
                 className={className}
             />
         </div>
