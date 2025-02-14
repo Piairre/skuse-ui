@@ -1,12 +1,130 @@
 import { OpenAPIV3 } from 'openapi-types';
 import { EnhancedOperationObject, TaggedOperationsMap } from '@/types/openapi';
 
+type Reference = {
+    $ref: string;
+};
+
 const validHttpMethods = new Set<OpenAPIV3.HttpMethods>(
     Object.values(OpenAPIV3.HttpMethods)
 );
 
-type Reference = {
-    $ref: string;
+const isNullableSchema = (schema: OpenAPIV3.SchemaObject): boolean => {
+    if (schema.type === 'array') {
+        return false;
+    }
+
+    const nonArraySchema = schema as OpenAPIV3.NonArraySchemaObject;
+    return !nonArraySchema.type &&
+        !nonArraySchema.properties &&
+        !nonArraySchema.oneOf &&
+        !nonArraySchema.anyOf;
+};
+
+const renderSchemaType = (schema: OpenAPIV3.SchemaObject): string => {
+    if (Array.isArray(schema.type)) {
+        return schema.type.join(' | ');
+    }
+
+    if (schema.oneOf) {
+        return 'oneOf';
+    }
+
+    if (schema.anyOf) {
+        const types = schema.anyOf.map((subSchema: OpenAPIV3.SchemaObject) => {
+            if (isNullableSchema(subSchema)) return 'null';
+            if (subSchema.type === 'object' && subSchema.properties) {
+                return 'object';
+            }
+            return subSchema.type || 'unknown';
+        });
+        return `anyOf<${types.join(' | ')}>`;
+    }
+
+    if (schema.type === 'array' && schema.items) {
+        const itemSchema = schema.items as OpenAPIV3.SchemaObject;
+        if (Array.isArray(itemSchema.type)) {
+            return `array<${itemSchema.type.join(' | ')}>`;
+        }
+        return `${schema.type}[${itemSchema.title || itemSchema.type || ''}]`;
+    }
+
+    return schema.type || 'unknown';
+};
+
+const generateExample = (schema: OpenAPIV3.SchemaObject): any => {
+    if (schema.example !== undefined) return schema.example;
+
+    if (schema.anyOf) {
+        const nonNullSchema = schema.anyOf.find(subSchema => {
+            return !isNullableSchema(subSchema as OpenAPIV3.SchemaObject);
+        });
+        if (nonNullSchema) {
+            return generateExample(nonNullSchema as OpenAPIV3.SchemaObject);
+        }
+        return null;
+    }
+
+    if (schema.oneOf) {
+        return generateExample(schema.oneOf[0] as OpenAPIV3.SchemaObject);
+    }
+
+    if (schema.type === 'object' && schema.properties) {
+        const example = Object.fromEntries(
+            Object.entries(schema.properties).map(([key, prop]) => [
+                key,
+                generateExample(prop as OpenAPIV3.SchemaObject)
+            ])
+        );
+
+        if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
+            example['additionalProp1'] = generateExample(schema.additionalProperties as OpenAPIV3.SchemaObject);
+        }
+
+        return example;
+    }
+
+    if (schema.type === 'array') {
+        if (!schema.items) return [];
+
+        const numItems = schema.minItems || 1;
+        return Array(numItems).fill(null).map(() =>
+            generateExample(schema.items as OpenAPIV3.SchemaObject)
+        );
+    }
+
+    if (Array.isArray(schema.type)) {
+        const nonNullType = schema.type.find(type => type !== 'null');
+        return generateExample({ ...schema, type: nonNullType || schema.type[0] });
+    }
+
+    const defaultValues: Record<string, any> = {
+        string: () => {
+            if (schema.format === 'date-time') return new Date().toISOString();
+            if (schema.format === 'date') return new Date().toISOString().split('T')[0];
+            if (schema.format === 'email') return 'user@example.com';
+            if (schema.format === 'uri') return 'https://example.com';
+            if (schema.format === 'uuid') return '123e4567-e89b-12d3-a456-426614174000';
+            if (schema.enum?.length) return schema.enum[0];
+            if (schema.pattern) return `pattern:${schema.pattern}`;
+            if (schema.minLength) return 'a'.repeat(schema.minLength);
+            return 'string';
+        },
+        number: () => {
+            if (schema.minimum !== undefined) return schema.minimum;
+            if (schema.maximum !== undefined) return schema.maximum;
+            return 0;
+        },
+        integer: () => {
+            if (schema.minimum !== undefined) return Math.ceil(schema.minimum);
+            if (schema.maximum !== undefined) return Math.floor(schema.maximum);
+            return 0;
+        },
+        boolean: () => schema.default ?? true
+    };
+
+    const type = schema.type as keyof typeof defaultValues;
+    return type in defaultValues ? defaultValues[type]() : null;
 };
 
 const isReference = (obj: any): obj is Reference => {
@@ -197,5 +315,8 @@ export {
     groupEndpointsByTags,
     findOperationByOperationIdAndTag,
     getBadgeColor,
-    isValidHttpMethod
+    isValidHttpMethod,
+    isNullableSchema,
+    renderSchemaType,
+    generateExample
 };

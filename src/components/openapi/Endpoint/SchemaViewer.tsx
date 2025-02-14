@@ -1,6 +1,7 @@
 import React from 'react';
 import { OpenAPIV3 } from 'openapi-types';
 import { Badge } from "@/components/ui/badge";
+import {renderSchemaType} from "@/utils/openapi";
 
 interface SchemaViewerProps {
     schema: OpenAPIV3.SchemaObject;
@@ -9,17 +10,6 @@ interface SchemaViewerProps {
 }
 
 const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, name, required }) => {
-    const renderType = () => {
-        if (schema.type === 'array' && schema.items) {
-            if ('$ref' in schema.items) {
-                const refName = schema.items.$ref.split('/').pop();
-                return `array[${refName}]`;
-            }
-            return `array[${(schema.items as OpenAPIV3.SchemaObject).type || 'object'}]`;
-        }
-        return schema.type || 'object';
-    };
-
     const renderPropertyContent = () => {
         if (schema.type === 'object' && schema.properties) {
             return Object.entries(schema.properties).map(([propName, propSchema]) => (
@@ -52,7 +42,7 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, name, required }) =
             <div className="flex items-center gap-2">
                 {name && <span className="font-mono">{name}</span>}
                 <Badge variant="outline" className="text-xs">
-                    {renderType()}
+                    {renderSchemaType(schema)}
                 </Badge>
                 {required && (
                     <Badge variant="outline" className="bg-red-50 text-xs">

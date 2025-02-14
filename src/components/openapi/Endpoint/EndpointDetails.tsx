@@ -10,11 +10,11 @@ import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { PlayCircle, FileJson, Database, Info, Lock } from 'lucide-react';
 import { OpenAPIV3 } from 'openapi-types';
 import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
-import SchemaViewer from './SchemaViewer';
 import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
 import ParameterObject = OpenAPIV3.ParameterObject;
+import RequestBodyViewer from "@/components/openapi/Endpoint/RequestBodyViewer";
 
 interface TabPanelProps {
     children: React.ReactNode;
@@ -47,11 +47,19 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
 
     const renderInfo = () => (
         <div className="space-y-6">
-            {operation.description && (
-                <div className="prose prose-slate max-w-none">
+
+            <div className="prose prose-slate max-w-none">
+
+                {operation.security && (
+                    <span className={"flex text-xs mb-1"}>
+                        <Lock className="w-4 h-4 me-2" />Authentication Required
+                    </span>
+                )}
+
+                {operation.description && (
                     <FormattedMarkdown markdown={operation.description} />
-                </div>
-            )}
+                )}
+            </div>
 
             {operation.deprecated && (
                 <Alert variant="destructive">
@@ -59,18 +67,6 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                         This endpoint is deprecated and might be removed in future versions.
                     </AlertDescription>
                 </Alert>
-            )}
-
-            {operation.security && (
-                <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-                    <h4 className="font-medium mb-2 flex items-center gap-2">
-                        <Lock className="w-4 h-4" />
-                        Authentication Required
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                        This endpoint requires authentication. Make sure to include your API key in the request headers.
-                    </p>
-                </div>
             )}
 
             {operation.externalDocs && (
@@ -90,66 +86,31 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
     );
 
     const renderParameters = () => (
-        <ParametersViewer
-            parameters={parameters}
-            spec={spec}
-        />
+        <ParametersViewer parameters={parameters} />
     );
 
     const renderRequestBody = () => {
         if (!requestBody) return null;
-
-        const contentType = Object.keys(requestBody.content)[0] || 'application/json';
-        const schema = requestBody.content[contentType]?.schema as OpenAPIV3.SchemaObject;
-
-        return (
-            <div className="space-y-6">
-                <div className="flex items-center gap-2">
-                    <Badge variant="outline">{contentType}</Badge>
-                    {requestBody.required && (
-                        <Badge variant="outline" className="bg-red-50">Required</Badge>
-                    )}
-                </div>
-
-                {requestBody.description && (
-                    <div className="prose prose-slate max-w-none">
-                        <FormattedMarkdown markdown={requestBody.description} />
-                    </div>
-                )}
-
-                {schema && (
-                    <div className="bg-slate-50 p-4 rounded-lg">
-                        <h4 className="font-medium mb-2">Schema</h4>
-                        <SchemaViewer schema={schema} />
-                    </div>
-                )}
-
-                <div className="space-y-2">
-                    <Label>Request Body</Label>
-                </div>
-            </div>
-        );
+        return <RequestBodyViewer requestBody={requestBody} />;
     };
 
     const renderResponses = () => (
         <ResponseViewer responses={responses}/>
     );
 
-    const renderSecurityInfo = () => {
-        if (!operation.security) return null;
+    const availableTabs = React.useMemo(() => {
+        const tabs = ['info'];
+        if (parameters.length > 0) tabs.push('parameters');
+        if (requestBody) tabs.push('body');
+        tabs.push('responses');
+        return tabs;
+    }, [parameters.length, requestBody]);
 
-        return (
-            <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-                <h4 className="font-medium mb-2 flex items-center gap-2">
-                    <Lock className="w-4 h-4" />
-                    Authentication Required
-                </h4>
-                <p className="text-sm text-gray-600">
-                    This endpoint requires authentication. Make sure to include your API key in the request headers.
-                </p>
-            </div>
-        );
-    };
+    React.useEffect(() => {
+        if (!availableTabs.includes(activeTab)) {
+            setActiveTab(availableTabs[0] || 'info');
+        }
+    }, [operation.operationId, availableTabs, activeTab]);
 
     return (
         <Card className="w-full">
@@ -162,7 +123,7 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                     </Badge>
                     <div>
                         <h2 className="text-xl font-semibold">{operation.path}</h2>
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                             {operation.summary}
                         </p>
                     </div>
@@ -170,7 +131,6 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
             </div>
 
             <div className="container grid grid-cols-5 gap-6 p-4">
-                {/* Left Column - Documentation */}
                 <div className="col-span-3">
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="w-full">
@@ -178,10 +138,12 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                                 <Info className="w-4 h-4" />
                                 Info
                             </TabsTrigger>
-                            <TabsTrigger value="parameters" className="flex items-center gap-2">
-                                <Database className="w-4 h-4" />
-                                Parameters
-                            </TabsTrigger>
+                            {parameters.length > 0 && (
+                                <TabsTrigger value="parameters" className="flex items-center gap-2">
+                                    <Database className="w-4 h-4" />
+                                    Parameters
+                                </TabsTrigger>
+                            )}
                             {requestBody && (
                                 <TabsTrigger value="body" className="flex items-center gap-2">
                                     <FileJson className="w-4 h-4" />
@@ -198,14 +160,13 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                             <TabsContent value="info">
                                 <TabPanel>
                                     {renderInfo()}
-                                    {renderSecurityInfo()}
                                 </TabPanel>
                             </TabsContent>
-
-                            <TabsContent value="parameters">
-                                <TabPanel>{renderParameters()}</TabPanel>
-                            </TabsContent>
-
+                            {parameters.length > 0 && (
+                                <TabsContent value="parameters">
+                                    <TabPanel>{renderParameters()}</TabPanel>
+                                </TabsContent>
+                            )}
                             {requestBody && (
                                 <TabsContent value="body">
                                     <TabPanel>{renderRequestBody()}</TabPanel>
