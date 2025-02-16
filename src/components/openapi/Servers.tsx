@@ -67,20 +67,20 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
     const hasVariables = selectedServer?.variables && Object.entries(selectedServer.variables).length > 0;
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center text-xl font-semibold">
-                    <ServerIcon className="mr-2 h-5 w-5 text-primary"/>
+        <Card className="bg-slate-950 text-white border-slate-800">
+            <CardHeader className="pb-2">
+                <CardTitle className="flex items-center text-lg font-normal">
+                    <ServerIcon className="mr-2 h-5 w-5 text-slate-400"/>
                     Servers
                 </CardTitle>
             </CardHeader>
             <CardContent>
-                <div className="flex gap-4">
+                <div className="flex flex-col gap-4">
                     <div className={cn(
-                        hasVariables ? "w-1/2" : "w-full"
+                        "w-full"
                     )}>
                         {computedUrl && (
-                            <span className="block text-sm text-muted-foreground mb-2">
+                            <span className="block text-sm text-slate-400 mb-2">
                                 {computedUrl}
                             </span>
                         )}
@@ -89,36 +89,49 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                             <Popover open={openServerPopover} onOpenChange={setOpenServerPopover}>
                                 <PopoverTrigger asChild>
                                     {selectedServer ? (
-                                        <Button variant="outline" role="combobox" aria-expanded={openServerPopover}
-                                                className="w-full justify-between">
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={openServerPopover}
+                                            className="w-full justify-between bg-slate-950 border-slate-700 text-slate-300 hover:bg-slate-900 hover:text-slate-200"
+                                        >
                                             {selectedServer.url}
-                                            <ChevronsUpDown className="opacity-50"/>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50"/>
                                         </Button>
                                     ) : (
-                                        <Button variant="secondary" className="w-full p-2 border rounded-lg cursor-not-allowed">
+                                        <Button variant="secondary" className="w-full p-2 cursor-not-allowed bg-slate-900 text-slate-400">
                                             No servers available
                                         </Button>
                                     )}
                                 </PopoverTrigger>
 
                                 {selectedServer && (
-                                    <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
-                                        <Command>
-                                            <CommandInput placeholder="Search server..."/>
+                                    <PopoverContent className="p-0 bg-slate-900 border border-slate-700">
+                                        <Command className="bg-slate-900">
+                                            <CommandInput placeholder="Search server..." className="border-slate-700"/>
                                             <CommandList>
-                                                <CommandEmpty>No server found</CommandEmpty>
+                                                <CommandEmpty className="text-slate-400">No server found</CommandEmpty>
                                                 <CommandGroup>
                                                     {servers.map((server) => (
-                                                        <CommandItem key={server.url} value={server.url} onSelect={() => {
-                                                            setSelectedServer(server);
-                                                            setOpenServerPopover(false);
-                                                        }}>
+                                                        <CommandItem
+                                                            key={server.url}
+                                                            value={server.url}
+                                                            onSelect={() => {
+                                                                setSelectedServer(server);
+                                                                setOpenServerPopover(false);
+                                                            }}
+                                                            className="text-slate-300 hover:bg-slate-800"
+                                                        >
                                                             <Check
-                                                                className={cn("mr-2 h-4 w-4", selectedServer?.url === server.url ? "opacity-100" : "opacity-0")}/>
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    selectedServer?.url === server.url ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
                                                             <div>
                                                                 <p>{server.url}</p>
                                                                 {server.description && (
-                                                                    <p className="text-xs text-muted-foreground">
+                                                                    <p className="text-xs text-slate-400">
                                                                         {server.description}
                                                                     </p>
                                                                 )}
@@ -135,21 +148,21 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                     </div>
 
                     {hasVariables && (
-                        <div className="flex-1 mt-1">
-                            <div className="flex items-start gap-3">
+                        <div className=" max-h-96 overflow-y-auto pr-2">
+                            <div className="grid grid-cols-3 gap-8">
                                 {Object.entries(selectedServer.variables ?? []).map(([name, variable]) => (
-                                    <div key={name} className="min-w-[150px]">
-                                        <label className="text-sm font-medium mb-1 block">
+                                    <div key={name} className="space-y-2 my-2">
+                                        <label className="ms-2 text-sm font-medium text-slate-300 block">
                                             {name}
                                             {variable.description && (
-                                                <span className="ml-1 text-xs text-muted-foreground">
+                                                <span className="ml-2 text-xs text-slate-400">
                                                     {variable.description}
                                                 </span>
                                             )}
                                         </label>
                                         {(variable as ServerVariable).enum ? (
                                             <select
-                                                className="w-full p-2 border rounded"
+                                                className="w-full bg-slate-900 border border-slate-700 rounded text-slate-300"
                                                 value={variables[name]}
                                                 onChange={(e) => handleVariableChange(name, e.target.value)}
                                             >
@@ -164,6 +177,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                                 value={variables[name]}
                                                 onChange={(e) => handleVariableChange(name, e.target.value)}
                                                 placeholder={`Enter ${name}`}
+                                                className="bg-slate-900 mx-2 border-slate-700 text-slate-300 placeholder:text-slate-500"
                                             />
                                         )}
                                     </div>
