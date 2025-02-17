@@ -11,7 +11,7 @@ const defaultSpec: UnifiedOpenAPI = {
 };
 
 interface OpenAPIContextType {
-    spec: UnifiedOpenAPI;  // Plus de null
+    spec: UnifiedOpenAPI;
     setSpec: (spec: UnifiedOpenAPI) => void;
     loading: boolean;
     setLoading: (loading: boolean) => void;

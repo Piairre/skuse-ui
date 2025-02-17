@@ -1,10 +1,10 @@
 import React from 'react';
-import { OpenAPIV3 } from 'openapi-types';
 import { Badge } from "@/components/ui/badge";
 import {renderSchemaType} from "@/utils/openapi";
+import { SchemaObject } from '@/types/unified-openapi-types';
 
 interface SchemaViewerProps {
-    schema: OpenAPIV3.SchemaObject;
+    schema: SchemaObject;
     name?: string;
     required?: boolean;
 }
@@ -15,7 +15,7 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, name, required }) =
             return Object.entries(schema.properties).map(([propName, propSchema]) => (
                 <div key={propName} className="mt-2">
                     <SchemaViewer
-                        schema={propSchema as OpenAPIV3.SchemaObject}
+                        schema={propSchema}
                         name={propName}
                         required={schema.required?.includes(propName)}
                     />
@@ -27,7 +27,7 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, name, required }) =
             return (
                 <div className="mt-2">
                     <SchemaViewer
-                        schema={schema.items as OpenAPIV3.SchemaObject}
+                        schema={schema.items}
                         name="Item"
                     />
                 </div>

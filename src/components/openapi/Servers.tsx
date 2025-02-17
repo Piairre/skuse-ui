@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { OpenAPIV3 } from "openapi-types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
@@ -18,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown, ServerIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { ServerObject } from '@/types/unified-openapi-types';
 
 interface ServerVariable {
     enum?: string[];
@@ -26,7 +26,7 @@ interface ServerVariable {
 }
 
 interface ServerBlockProps {
-    servers: OpenAPIV3.ServerObject[];
+    servers: ServerObject[];
 }
 
 const Servers: React.FC<ServerBlockProps> = ({ servers }) => {

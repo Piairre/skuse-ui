@@ -8,9 +8,6 @@ import {SkuseDocumentation} from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import { findOperationByOperationIdAndTag } from '@/utils/openapi';
 import {EnhancedOperationObject} from "@/types/openapi";
-import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
-import {OpenAPIV3} from "openapi-types";
-import Document = OpenAPIV3.Document;
 
 interface EndpointParams {
     tag?: string;

@@ -1,5 +1,4 @@
 import React from 'react';
-import {OpenAPIV3} from 'openapi-types';
 import {Badge} from "@/components/ui/badge";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {ChevronDown, ChevronRight} from 'lucide-react';

@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { OpenAPIV3 } from 'openapi-types';
 import { useOpenAPIContext } from './OpenAPIContext';
 import {resolveOpenAPIDocument} from "@/utils/openapi";
 import {OpenAPIInputDocument} from "@/types/unified-openapi-types";

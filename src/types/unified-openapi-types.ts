@@ -31,17 +31,7 @@ export interface UnifiedOpenAPI {
         version: string;
         summary?: string; // OpenAPI 3.1
     };
-    servers?: Array<{
-        url: string;
-        description?: string;
-        variables?: {
-            [key: string]: {
-                enum?: string[];
-                default: string;
-                description?: string;
-            };
-        };
-    }>;
+    servers?: ServerObject[];
     paths: {
         [path: string]: {
             summary?: string;
@@ -54,17 +44,7 @@ export interface UnifiedOpenAPI {
             head?: OperationObject;
             patch?: OperationObject;
             trace?: OperationObject;
-            servers?: Array<{
-                url: string;
-                description?: string;
-                variables?: {
-                    [key: string]: {
-                        enum?: string[];
-                        default: string;
-                        description?: string;
-                    };
-                };
-            }>;
+            servers?: ServerObject[];
             parameters?: ParameterObject[];
         };
     };
@@ -138,17 +118,7 @@ export interface OperationObject {
     security?: Array<{
         [key: string]: string[];
     }>;
-    servers?: Array<{
-        url: string;
-        description?: string;
-        variables?: {
-            [key: string]: {
-                enum?: string[];
-                default: string;
-                description?: string;
-            };
-        };
-    }>;
+    servers?: ServerObject[];
 }
 
 export interface ParameterObject {
@@ -322,17 +292,7 @@ export interface PathItemObject {
     head?: OperationObject;
     patch?: OperationObject;
     trace?: OperationObject;
-    servers?: Array<{
-        url: string;
-        description?: string;
-        variables?: {
-            [key: string]: {
-                enum?: string[];
-                default: string;
-                description?: string;
-            };
-        };
-    }>;
+    servers?: ServerObject[];
     parameters?: ParameterObject[];
 }
 
@@ -344,6 +304,20 @@ export interface EncodingObject {
     style?: string;
     explode?: boolean;
     allowReserved?: boolean;
+}
+
+export interface ServerObject {
+    url: string;
+    description?: string;
+    variables?: {
+        [key: string]: ServerVariableObject;
+    };
+}
+
+export interface ServerVariableObject {
+    enum?: string[];
+    default: string;
+    description?: string;
 }
 
 export type SecuritySchemeObject =
