@@ -26,8 +26,8 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
                 const rawSpec: OpenAPIInputDocument = await response.json();
                 const resolvedSpec = resolveOpenAPIDocument(rawSpec);
 
-                if (spec?.info?.title) {
-                    document.title = `${spec.info.title} - Skuse UI`;
+                if (resolvedSpec?.info?.title) {
+                    document.title = `${resolvedSpec.info.title} - Skuse UI`;
                 } else {
                     document.title = 'API Docs - Skuse UI';
                 }
