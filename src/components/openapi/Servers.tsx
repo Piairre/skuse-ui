@@ -52,8 +52,8 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
             let url = selectedServer.url;
             Object.entries(variables).forEach(([key, value]) => {
                 url = url.replace(`{${key}}`, value);
+                setComputedUrl(url);
             });
-            setComputedUrl(url);
         }
     }, [selectedServer, variables]);
 
@@ -69,7 +69,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
     return (
         <Card>
             <CardHeader className="pb-2">
-                <CardTitle className="flex items-center text-lg font-semibold">
+                <CardTitle className="flex items-center text-xl font-semibold">
                     <ServerIcon className="mr-2 h-5 w-5"/>
                     Servers
                 </CardTitle>
@@ -79,13 +79,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                     <div className={cn(
                         "w-full"
                     )}>
-                        {computedUrl && (
-                            <span className="block text-sm mb-2">
-                                {computedUrl}
-                            </span>
-                        )}
-
-                        <div className="relative">
+                        <div className="relative pt-4">
                             <Popover open={openServerPopover} onOpenChange={setOpenServerPopover}>
                                 <PopoverTrigger asChild>
                                     {selectedServer ? (
@@ -106,7 +100,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                 </PopoverTrigger>
 
                                 {selectedServer && (
-                                    <PopoverContent className="p-0">
+                                    <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
                                         <Command>
                                             <CommandInput placeholder="Search server..."/>
                                             <CommandList>
@@ -143,6 +137,11 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                     </PopoverContent>
                                 )}
                             </Popover>
+                            {computedUrl && (
+                                <span className="block text-sm mb-2">
+                                {computedUrl}
+                            </span>
+                            )}
                         </div>
                     </div>
 
