@@ -1,9 +1,18 @@
 import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { OpenAPIV3 } from 'openapi-types';
+import { UnifiedOpenAPI } from "@/types/unified-openapi-types";
+
+// Provide a default value for the context
+const defaultSpec: UnifiedOpenAPI = {
+    info: {
+        title: 'API Documentation',
+        version: '1.0.0',
+    },
+    paths: {}
+};
 
 interface OpenAPIContextType {
-    spec: OpenAPIV3.Document | null;
-    setSpec: (spec: OpenAPIV3.Document) => void;
+    spec: UnifiedOpenAPI;  // Plus de null
+    setSpec: (spec: UnifiedOpenAPI) => void;
     loading: boolean;
     setLoading: (loading: boolean) => void;
     error: Error | null;
@@ -11,7 +20,7 @@ interface OpenAPIContextType {
 }
 
 const OpenAPIContext = createContext<OpenAPIContextType>({
-    spec: null,
+    spec: defaultSpec,
     setSpec: () => {},
     loading: false,
     setLoading: () => {},
@@ -20,7 +29,7 @@ const OpenAPIContext = createContext<OpenAPIContextType>({
 });
 
 export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [spec, setSpec] = useState<OpenAPIV3.Document | null>(null);
+    const [spec, setSpec] = useState<UnifiedOpenAPI>(defaultSpec);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
 

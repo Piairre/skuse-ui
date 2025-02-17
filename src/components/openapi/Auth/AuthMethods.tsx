@@ -6,17 +6,29 @@ import {
     Lock,
     KeyRound,
     UserCheck,
-    ShieldCheck, ChevronsUpDown, Check
+    ShieldCheck,
+    ChevronsUpDown,
+    Check
 } from 'lucide-react';
-import {OpenAPIV3} from 'openapi-types';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
 import {Command, CommandEmpty, CommandGroup, CommandItem, CommandList} from "@/components/ui/command";
 import {cn} from "@/lib/utils";
 import {AuthorizeButton} from "@/components/openapi/Auth/AuthButton";
+import {SecuritySchemeObject} from "@/types/unified-openapi-types";
+
+type HttpScheme = Extract<SecuritySchemeObject, { type: 'http' | 'basic' }>;
+type ApiKeyScheme = Extract<SecuritySchemeObject, { type: 'apiKey' }>;
+type OAuth2Scheme = Extract<SecuritySchemeObject, { type: 'oauth2' }>;
+type OpenIdScheme = Extract<SecuritySchemeObject, { type: 'openIdConnect' }>;
+
+type AuthComponent = React.FC<{ scheme: SecuritySchemeObject }>;
+const UnsupportedAuthMethod: AuthComponent = () => (
+    <div>Unsupported authentication method</div>
+);
 
 export const BasicAuthMethod: React.FC<{
-    scheme: OpenAPIV3.HttpSecurityScheme
+    scheme: HttpScheme
 }> = ({scheme}) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
@@ -50,7 +62,7 @@ export const BasicAuthMethod: React.FC<{
 };
 
 export const BearerTokenMethod: React.FC<{
-    scheme: OpenAPIV3.HttpSecurityScheme
+    scheme: HttpScheme
 }> = ({scheme}) => {
     const [token, setToken] = useState('');
 
@@ -80,7 +92,7 @@ export const BearerTokenMethod: React.FC<{
 };
 
 export const ApiKeyMethod: React.FC<{
-    scheme: OpenAPIV3.ApiKeySecurityScheme
+    scheme: ApiKeyScheme
 }> = ({scheme}) => {
     const [apiKey, setApiKey] = useState('');
 
@@ -105,13 +117,16 @@ export const ApiKeyMethod: React.FC<{
 };
 
 export const OAuth2Method: React.FC<{
-    scheme: OpenAPIV3.OAuth2SecurityScheme
+    scheme: OAuth2Scheme
 }> = ({scheme}) => {
-    // Determine available flows
-    const availableFlows = Object.keys(scheme.flows || {}) as Array<keyof OpenAPIV3.OAuth2SecurityScheme['flows']>;
+    type FlowType = keyof OAuth2Scheme['flows'];
+    const availableFlows = Object.keys(scheme.flows) as Array<FlowType>;
 
-    const [selectedFlow, setSelectedFlow] = useState<keyof OpenAPIV3.OAuth2SecurityScheme['flows'] | null>(availableFlows[0]);
-    const [open, setOpen] = useState(false)
+    const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(
+        // TODO: Fix incorrect type
+        availableFlows.length > 0 ? availableFlows[0] : ''
+    );
+    const [open, setOpen] = useState(false);
 
     return (
         <div className="space-y-4">
@@ -146,10 +161,9 @@ export const OAuth2Method: React.FC<{
                                             key={flow}
                                             value={flow}
                                             onSelect={(currentValue) => {
-                                                setSelectedFlow(
-                                                    currentValue === selectedFlow ? null : currentValue as keyof OpenAPIV3.OAuth2SecurityScheme['flows']
-                                                )
-                                                setOpen(false)
+                                                const flowValue = currentValue as FlowType;
+                                                setSelectedFlow(flowValue === selectedFlow ? null : flowValue);
+                                                setOpen(false);
                                             }}
                                         >
                                             <Check
@@ -171,7 +185,7 @@ export const OAuth2Method: React.FC<{
             {selectedFlow && (
                 <div className="space-y-2">
                     <div className="text-sm text-muted-foreground">
-                        {scheme.flows?.[selectedFlow] && (
+                        {scheme.flows[selectedFlow] && (
                             <>
                                 {selectedFlow === 'implicit' && (
                                     <p>Authorization URL: {scheme.flows.implicit?.authorizationUrl}</p>
@@ -207,7 +221,7 @@ export const OAuth2Method: React.FC<{
 };
 
 export const OpenIDMethod: React.FC<{
-    scheme: OpenAPIV3.OpenIdSecurityScheme
+    scheme: OpenIdScheme
 }> = ({scheme}) => {
     return (
         <div className="space-y-4">
@@ -230,15 +244,16 @@ export const OpenIDMethod: React.FC<{
 };
 
 export const getAuthMethodComponent = (
-    scheme: OpenAPIV3.SecuritySchemeObject
-): React.FC<{ scheme: OpenAPIV3.SecuritySchemeObject }> => {
+    scheme: SecuritySchemeObject
+): AuthComponent => {
     switch (scheme.type) {
         case 'http':
-            if ((scheme as OpenAPIV3.HttpSecurityScheme).scheme === 'basic')
+        case 'basic':
+            if (scheme.scheme === 'basic')
                 return BasicAuthMethod;
-            if ((scheme as OpenAPIV3.HttpSecurityScheme).scheme === 'bearer')
+            if (scheme.scheme === 'bearer')
                 return BearerTokenMethod;
-            break;
+            return UnsupportedAuthMethod;
         case 'apiKey':
             return ApiKeyMethod;
         case 'oauth2':
@@ -246,14 +261,14 @@ export const getAuthMethodComponent = (
         case 'openIdConnect':
             return OpenIDMethod;
         default:
-            return () => <div>Unsupported authentication method</div>;
+            return UnsupportedAuthMethod;
     }
 };
 
-
-export const getSchemeIcon = (type: string) => {
+export const getSchemeIcon = (type: SecuritySchemeObject['type']) => {
     switch (type) {
         case 'http':
+        case 'basic':
             return <UserCheck className="w-5 h-5 mr-2"/>;
         case 'apiKey':
             return <Key className="w-5 h-5 mr-2"/>;
