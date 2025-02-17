@@ -4,16 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { EnhancedOperationObject } from "@/types/openapi";
+import {EnhancedOperationObject, ParameterObject, RequestBodyObject, ResponseObject} from "@/types/openapi";
 import { getBadgeColor } from "@/utils/openapi";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { PlayCircle, FileJson, Database, Info, Lock } from 'lucide-react';
-import { OpenAPIV3 } from 'openapi-types';
 import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
-import ParameterObject = OpenAPIV3.ParameterObject;
 import RequestBodyViewer from "@/components/openapi/Endpoint/RequestBodyViewer";
 
 interface TabPanelProps {
@@ -28,7 +26,8 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, className = "" }) => (
 );
 
 const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ operation }) => {
-    const spec = useOpenAPIContext().spec as OpenAPIV3.Document;
+    const { spec } = useOpenAPIContext();
+
     const [activeTab, setActiveTab] = useState('info');
     const [requestValues] = useState<{
         parameters: Record<string, string>;
@@ -40,8 +39,8 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
 
     // Résolution des références
     const parameters = operation.parameters as ParameterObject[] ?? [];
-    const requestBody = operation.requestBody as OpenAPIV3.RequestBodyObject || null;
-    const responses = operation.responses as {[code: string]: | OpenAPIV3.ResponseObject};
+    const requestBody = operation.requestBody as RequestBodyObject || null;
+    const responses = operation.responses as {[code: string]: | ResponseObject};
 
     const serverUrl = spec.servers?.[0]?.url || 'https://api.example.com';
 

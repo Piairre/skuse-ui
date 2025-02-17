@@ -293,13 +293,25 @@ function findOperationByOperationIdAndTag(
     operationId: string,
     tag?: string
 ): EnhancedOperationObject | null {
-    const {spec} = useOpenAPIContext();
+    const { spec } = useOpenAPIContext();
+
+    if (!spec?.paths) return null;
 
     const groupedEndpoints = groupEndpointsByTags(spec.paths);
     const tagEndpoints = groupedEndpoints[tag || 'default'];
 
     if (!tagEndpoints) return null;
-    return tagEndpoints.find(endpoint => endpoint.operationId === operationId) || null;
+    return tagEndpoints.find(endpoint => getOperationId(endpoint) === operationId) || null;
+}
+
+function getOperationId(operation: EnhancedOperationObject) {
+    // Fallback if no operationId is provided
+    if (!operation.operationId) {
+        let formattedPath = operation.path.replace(/\//g, '_');
+        return `${operation.method.toLowerCase()}${formattedPath}`;
+    }
+
+    return operation.operationId;
 }
 
 function getBadgeColor(httpMethod: string): string {
@@ -325,5 +337,6 @@ export {
     isValidHttpMethod,
     isNullableSchema,
     renderSchemaType,
-    generateExample
+    generateExample,
+    getOperationId
 };

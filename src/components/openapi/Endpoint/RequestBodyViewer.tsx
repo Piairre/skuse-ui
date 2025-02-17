@@ -1,19 +1,18 @@
 import React from 'react';
-import {OpenAPIV3} from 'openapi-types';
 import {Badge} from "@/components/ui/badge";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import SchemaProperty from './SchemaProperty';
 import { generateExample } from '@/utils/openapi';
-import MediaTypeObject = OpenAPIV3.MediaTypeObject;
+import {MediaTypeObject, RequestBodyObject, SchemaObject} from "@/types/unified-openapi-types";
 
 interface RequestBodyViewerProps {
-    requestBody: OpenAPIV3.RequestBodyObject;
+    requestBody: RequestBodyObject;
 }
 
 const ContentTypeTab: React.FC<{
     contentType: string;
-    content: OpenAPIV3.MediaTypeObject;
+    content: MediaTypeObject | undefined;
     isActive: boolean;
 }> = ({ contentType, isActive }) => {
     return (
@@ -55,7 +54,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                             <ContentTypeTab
                                 key={contentType}
                                 contentType={contentType}
-                                content={requestBody.content[contentType] as MediaTypeObject}
+                                content={requestBody.content[contentType]}
                                 isActive={activeContentType === contentType}
                             />
                         ))}
@@ -74,7 +73,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                                     <h3 className="text-base font-medium dark:text-gray-100">Request Schema</h3>
                                     <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 space-y-1">
                                         <SchemaProperty
-                                            schema={content.schema as OpenAPIV3.SchemaObject}
+                                            schema={content.schema}
                                             isRoot={true}
                                         />
                                     </div>
@@ -85,7 +84,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                                     <div>
                                         <FormattedMarkdown
                                             markdown={`\`\`\`json\n${JSON.stringify(
-                                                (content.schema as OpenAPIV3.SchemaObject).example || generateExample(content.schema as OpenAPIV3.SchemaObject),
+                                                (content.schema as SchemaObject).example || generateExample(content.schema as SchemaObject),
                                                 null,
                                                 2
                                             )}\n\`\`\``}
