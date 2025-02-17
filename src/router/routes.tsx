@@ -4,10 +4,10 @@ import {
     Router
 } from '@tanstack/react-router';
 import Information from '@/components/openapi/Information';
-import {SkuseDocumentation} from "@/SkuseDocumentation";
+import { SkuseDocumentation } from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import { findOperationByOperationIdAndTag } from '@/utils/openapi';
-import {EnhancedOperationObject} from "@/types/openapi";
+import { EnhancedOperationObject } from "@/types/openapi";
 
 interface EndpointParams {
     tag?: string;
@@ -15,10 +15,10 @@ interface EndpointParams {
 }
 
 const rootRoute = new RootRoute({
-    // See examples to test doc : https://apis.guru/
-    component: () => {
-        return <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/bunq.com/1.0/openapi.json"} />;
-    }
+    component: () => (
+        // See examples to test doc : https://apis.guru/
+        <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/bunq.com/1.0/openapi.json"} />
+    )
 });
 
 const indexRoute = new Route({
@@ -35,7 +35,6 @@ const endpointRoute = new Route({
     path: '/$tag/$operationId',
     component: () => {
         const { tag, operationId } = endpointRoute.useParams();
-
         let operation = findOperationByOperationIdAndTag(operationId, tag);
 
         // TODO: Add a 404 page if operation is not found

@@ -90,7 +90,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={openServerPopover}
-                                            className="w-full justify-between"
+                                            className="w-full justify-between rounded-md"
                                         >
                                             {selectedServer.url}
                                             <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50"/>
