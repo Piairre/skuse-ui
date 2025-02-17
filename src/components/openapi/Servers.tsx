@@ -34,6 +34,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
     const [selectedServer, setSelectedServer] = useState(servers[0] || null);
     const [variables, setVariables] = useState<Record<string, string>>({});
     const [computedUrl, setComputedUrl] = useState('');
+    const [openVariablePopovers, setOpenVariablePopovers] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         if (selectedServer?.variables) {
@@ -62,6 +63,10 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
             ...prev,
             [name]: value
         }));
+        setOpenVariablePopovers(prev => ({
+            ...prev,
+            [name]: false
+        }));
     };
 
     const hasVariables = selectedServer?.variables && Object.entries(selectedServer.variables).length > 0;
@@ -76,9 +81,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
             </CardHeader>
             <CardContent>
                 <div className="flex flex-col gap-4">
-                    <div className={cn(
-                        "w-full"
-                    )}>
+                    <div className={cn("w-full")}>
                         <div className="relative pt-4">
                             <Popover open={openServerPopover} onOpenChange={setOpenServerPopover}>
                                 <PopoverTrigger asChild>
@@ -139,15 +142,15 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                             </Popover>
                             {computedUrl && (
                                 <span className="block text-sm mb-2">
-                                {computedUrl}
-                            </span>
+                                    {computedUrl}
+                                </span>
                             )}
                         </div>
                     </div>
 
                     {hasVariables && (
                         <div className="px-2 max-h-96 overflow-y-auto pr-2">
-                            <div className="grid grid-cols-3 gap-8">
+                            <div className="grid grid-cols-2 gap-8">
                                 {Object.entries(selectedServer.variables ?? []).map(([name, variable]) => (
                                     <div key={name} className="space-y-2 my-2">
                                         <label className="ms-2 text-sm font-medium block">
@@ -159,17 +162,52 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                             )}
                                         </label>
                                         {(variable as ServerVariable).enum ? (
-                                            <select
-                                                className="w-full"
-                                                value={variables[name]}
-                                                onChange={(e) => handleVariableChange(name, e.target.value)}
+                                            <Popover
+                                                open={openVariablePopovers[name]}
+                                                onOpenChange={(open) =>
+                                                    setOpenVariablePopovers(prev => ({
+                                                        ...prev,
+                                                        [name]: open
+                                                    }))
+                                                }
                                             >
-                                                {(variable as ServerVariable).enum?.map((option) => (
-                                                    <option key={option} value={option}>
-                                                        {option}
-                                                    </option>
-                                                ))}
-                                            </select>
+                                                <PopoverTrigger asChild>
+                                                    <Button
+                                                        variant="outline"
+                                                        role="combobox"
+                                                        aria-expanded={openVariablePopovers[name]}
+                                                        className="w-full justify-between"
+                                                    >
+                                                        {variables[name] || `Select ${name}`}
+                                                        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50"/>
+                                                    </Button>
+                                                </PopoverTrigger>
+                                                <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                                                    <Command>
+                                                        <CommandInput placeholder={`Search ${name}...`}/>
+                                                        <CommandList>
+                                                            <CommandEmpty>No option found</CommandEmpty>
+                                                            <CommandGroup>
+                                                                {(variable as ServerVariable).enum?.map((option) => (
+                                                                    <CommandItem
+                                                                        key={option}
+                                                                        value={option}
+                                                                        onSelect={() => handleVariableChange(name, option)}
+                                                                    >
+                                                                        <Check
+                                                                            className={cn(
+                                                                                "mr-2 h-4 w-4",
+                                                                                variables[name] === option ? "opacity-100" : "opacity-0"
+                                                                            )}
+                                                                        />
+                                                                        {option}
+                                                                    </CommandItem>
+                                                                ))}
+                                                            </CommandGroup>
+                                                        </CommandList>
+                                                    </Command>
+                                                </PopoverContent>
+                                            </Popover>
                                         ) : (
                                             <Input
                                                 value={variables[name]}
