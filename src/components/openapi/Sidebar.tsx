@@ -3,9 +3,8 @@ import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/
 import {ChevronDown, ChevronUp, Moon, Sun} from 'lucide-react';
 import {Badge} from "@/components/ui/badge";
 import {Button} from "@/components/ui/button";
-import {OpenAPIV3} from "openapi-types";
 import {EnhancedOperationObject} from "@/types/openapi";
-import {getBadgeColor, groupEndpointsByTags} from "@/utils/openapi";
+import {getBadgeColor, getOperationId, groupEndpointsByTags} from "@/utils/openapi";
 import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 import {Link} from "@tanstack/react-router";
 import {useTheme} from "@/components/theme-provider";
@@ -14,8 +13,8 @@ import {Switch} from "@/components/ui/switch";
 const Sidebar: React.FC = () => {
     const [openTag, setOpenTag] = useState<string | null>(null);
 
-    const spec = useOpenAPIContext().spec;
-    const groupedEndpointsByTag = groupEndpointsByTags(spec?.paths as Record<string, OpenAPIV3.PathItemObject>);
+    const {spec} = useOpenAPIContext();
+    const groupedEndpointsByTag = groupEndpointsByTags(spec?.paths);
     const { theme, setTheme } = useTheme();
 
     // Manage endpoints without tags
@@ -87,13 +86,7 @@ const Sidebar: React.FC = () => {
 
 const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: string }> = ({operation, tag}) => {
     // Build the link to the operation
-    let operationIdentifier = operation.operationId;
-
-    // Fallback if no operationId is provided
-    if (!operationIdentifier) {
-        let formattedPath = operation.path.replace(/\//g, '_');
-        operationIdentifier = `${operation.method.toLowerCase()}${formattedPath}`;
-    }
+    let operationIdentifier = getOperationId(operation);
 
     let linkTo = `/$operationIdentifier`;
     let params = {

@@ -8,9 +8,6 @@ import {SkuseDocumentation} from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import { findOperationByOperationIdAndTag } from '@/utils/openapi';
 import {EnhancedOperationObject} from "@/types/openapi";
-import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
-import {OpenAPIV3} from "openapi-types";
-import Document = OpenAPIV3.Document;
 
 interface EndpointParams {
     tag?: string;
@@ -38,9 +35,8 @@ const endpointRoute = new Route({
     path: '/$tag/$operationId',
     component: () => {
         const { tag, operationId } = endpointRoute.useParams();
-        const spec = useOpenAPIContext().spec as Document;
 
-        let operation = findOperationByOperationIdAndTag(spec, operationId, tag);
+        let operation = findOperationByOperationIdAndTag(operationId, tag);
 
         // TODO: Add a 404 page if operation is not found
         return <EndpointDetails operation={operation as EnhancedOperationObject} />;
@@ -52,9 +48,7 @@ const endpointRouteUntagged = new Route({
     path: '/$operationId',
     component: () => {
         const { operationId }: EndpointParams = endpointRouteUntagged.useParams();
-
-        const spec = useOpenAPIContext().spec as Document;
-        let operation = findOperationByOperationIdAndTag(spec, operationId);
+        let operation = findOperationByOperationIdAndTag(operationId);
 
         // TODO: Add a 404 page if operation is not found
         return <EndpointDetails operation={operation as EnhancedOperationObject} />;

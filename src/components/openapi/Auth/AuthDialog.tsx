@@ -13,14 +13,12 @@ import {
     TabsTrigger
 } from "@/components/ui/tabs";
 import {ShieldCheck} from 'lucide-react';
-import {OpenAPIV3} from 'openapi-types';
 import {getAuthMethodComponent, getSchemeIcon} from './AuthMethods';
+import {SecuritySchemeObject} from "@/types/unified-openapi-types";
 
 interface AuthDialogProps {
+    securitySchemes: Record<string, SecuritySchemeObject>;
     children: React.ReactNode;
-    securitySchemes: {
-        [key: string]: OpenAPIV3.SecuritySchemeObject
-    }
 }
 
 const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {

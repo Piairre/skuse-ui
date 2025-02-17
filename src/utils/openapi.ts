@@ -1,27 +1,34 @@
-import { OpenAPIV3 } from 'openapi-types';
-import { EnhancedOperationObject, TaggedOperationsMap } from '@/types/openapi';
+import {
+    UnifiedOpenAPI,
+    SchemaObject,
+    OperationObject,
+    PathsObject,
+    EnhancedOperationObject,
+    TaggedOperationsMap,
+    HttpMethod, OpenAPIInputDocument
+} from '@/types/openapi';
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
 type Reference = {
     $ref: string;
 };
 
-const validHttpMethods = new Set<OpenAPIV3.HttpMethods>(
-    Object.values(OpenAPIV3.HttpMethods)
-);
+const validHttpMethods = new Set<HttpMethod>([
+    'GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH', 'TRACE'
+]);
 
-const isNullableSchema = (schema: OpenAPIV3.SchemaObject): boolean => {
+const isNullableSchema = (schema: SchemaObject): boolean => {
     if (schema.type === 'array') {
         return false;
     }
 
-    const nonArraySchema = schema as OpenAPIV3.NonArraySchemaObject;
-    return !nonArraySchema.type &&
-        !nonArraySchema.properties &&
-        !nonArraySchema.oneOf &&
-        !nonArraySchema.anyOf;
+    return !schema.type &&
+        !schema.properties &&
+        !schema.oneOf &&
+        !schema.anyOf;
 };
 
-const renderSchemaType = (schema: OpenAPIV3.SchemaObject): string => {
+const renderSchemaType = (schema: SchemaObject): string => {
     if (Array.isArray(schema.type)) {
         return schema.type.join(' | ');
     }
@@ -31,7 +38,7 @@ const renderSchemaType = (schema: OpenAPIV3.SchemaObject): string => {
     }
 
     if (schema.anyOf) {
-        const types = schema.anyOf.map((subSchema: OpenAPIV3.SchemaObject) => {
+        const types = schema.anyOf.map((subSchema: SchemaObject) => {
             if (isNullableSchema(subSchema)) return 'null';
             if (subSchema.type === 'object' && subSchema.properties) {
                 return 'object';
@@ -42,7 +49,8 @@ const renderSchemaType = (schema: OpenAPIV3.SchemaObject): string => {
     }
 
     if (schema.type === 'array' && schema.items) {
-        const itemSchema = schema.items as OpenAPIV3.SchemaObject;
+        if (!schema.items) return `${schema.type}[]`;
+        const itemSchema = schema.items;
         if (Array.isArray(itemSchema.type)) {
             return `array<${itemSchema.type.join(' | ')}>`;
         }
@@ -52,33 +60,34 @@ const renderSchemaType = (schema: OpenAPIV3.SchemaObject): string => {
     return schema.type || 'unknown';
 };
 
-const generateExample = (schema: OpenAPIV3.SchemaObject): any => {
+const generateExample = (schema: SchemaObject | undefined): any => {
+    if (!schema) return null;
     if (schema.example !== undefined) return schema.example;
 
     if (schema.anyOf) {
         const nonNullSchema = schema.anyOf.find(subSchema => {
-            return !isNullableSchema(subSchema as OpenAPIV3.SchemaObject);
+            return !isNullableSchema(subSchema);
         });
         if (nonNullSchema) {
-            return generateExample(nonNullSchema as OpenAPIV3.SchemaObject);
+            return generateExample(nonNullSchema);
         }
         return null;
     }
 
     if (schema.oneOf) {
-        return generateExample(schema.oneOf[0] as OpenAPIV3.SchemaObject);
+        return generateExample(schema.oneOf[0]);
     }
 
     if (schema.type === 'object' && schema.properties) {
         const example = Object.fromEntries(
             Object.entries(schema.properties).map(([key, prop]) => [
                 key,
-                generateExample(prop as OpenAPIV3.SchemaObject)
+                generateExample(prop)
             ])
         );
 
         if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-            example['additionalProp1'] = generateExample(schema.additionalProperties as OpenAPIV3.SchemaObject);
+            example['additionalProp1'] = generateExample(schema.additionalProperties as SchemaObject);
         }
 
         return example;
@@ -89,7 +98,7 @@ const generateExample = (schema: OpenAPIV3.SchemaObject): any => {
 
         const numItems = schema.minItems || 1;
         return Array(numItems).fill(null).map(() =>
-            generateExample(schema.items as OpenAPIV3.SchemaObject)
+            generateExample(schema.items as SchemaObject)
         );
     }
 
@@ -162,7 +171,7 @@ const mergeObjects = (obj1: any, obj2: any): any => {
     return result;
 };
 
-const resolveReference = (ref: string, document: OpenAPIV3.Document): any => {
+const resolveReference = (ref: string, document: OpenAPIInputDocument): any => {
     const parts = ref.split('/').slice(1);
     let current: any = document;
 
@@ -177,7 +186,7 @@ const resolveReference = (ref: string, document: OpenAPIV3.Document): any => {
     return current;
 };
 
-const resolveAllOf = (schema: any, document: OpenAPIV3.Document, visited: Set<string>): any => {
+const resolveAllOf = (schema: any, document: OpenAPIInputDocument, visited: Set<string>): any => {
     if (!schema.allOf || !Array.isArray(schema.allOf)) {
         return schema;
     }
@@ -195,12 +204,11 @@ const resolveAllOf = (schema: any, document: OpenAPIV3.Document, visited: Set<st
     return mergeObjects(mergedSchema, restSchema);
 };
 
-const resolveReferences = (obj: any, document: OpenAPIV3.Document, visited = new Set<string>()): any => {
+const resolveReferences = (obj: any, document: OpenAPIInputDocument, visited = new Set<string>()): any => {
     if (!obj || typeof obj !== 'object') {
         return obj;
     }
 
-    // Si c'est une référence
     if (isReference(obj)) {
         if (!visited.has(obj.$ref)) {
             visited.add(obj.$ref);
@@ -225,7 +233,7 @@ const resolveReferences = (obj: any, document: OpenAPIV3.Document, visited = new
     return result;
 };
 
-const resolveOpenAPIDocument = (document: OpenAPIV3.Document): OpenAPIV3.Document => {
+const resolveOpenAPIDocument = (document: OpenAPIInputDocument): UnifiedOpenAPI => {
     const documentCopy = JSON.parse(JSON.stringify(document));
 
     if (documentCopy.paths) {
@@ -236,19 +244,19 @@ const resolveOpenAPIDocument = (document: OpenAPIV3.Document): OpenAPIV3.Documen
         documentCopy.components = resolveReferences(documentCopy.components, document);
     }
 
-    return documentCopy;
+    return documentCopy as UnifiedOpenAPI;
 };
 
-function isValidHttpMethod(method: string): method is OpenAPIV3.HttpMethods {
-    return validHttpMethods.has(method.toLowerCase() as OpenAPIV3.HttpMethods);
+function isValidHttpMethod(method: string): method is HttpMethod {
+    return validHttpMethods.has(method.toUpperCase() as HttpMethod);
 }
 
-function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap {
+function groupEndpointsByTags(paths: PathsObject): TaggedOperationsMap {
     const tagMap: TaggedOperationsMap = {};
 
     function pushToTag(
         tag: string | undefined,
-        operation: OpenAPIV3.OperationObject,
+        operation: OperationObject,
         path: string,
         method: string
     ): void {
@@ -260,7 +268,7 @@ function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap
         const enhancedOperation: EnhancedOperationObject = {
             ...operation,
             path,
-            method: method.toUpperCase() as Uppercase<OpenAPIV3.HttpMethods>
+            method: method.toUpperCase() as HttpMethod
         };
 
         tagMap[normalizedTag].push(enhancedOperation);
@@ -270,7 +278,7 @@ function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap
         if (pathItem) {
             Object.entries(pathItem).forEach(([method, operation]) => {
                 if (isValidHttpMethod(method)) {
-                    const typedOperation = operation as OpenAPIV3.OperationObject;
+                    const typedOperation = operation as OperationObject;
                     const tag = typedOperation.tags?.[0] || 'default';
                     pushToTag(tag, typedOperation, path, method);
                 }
@@ -282,32 +290,43 @@ function groupEndpointsByTags(paths: OpenAPIV3.PathsObject): TaggedOperationsMap
 }
 
 function findOperationByOperationIdAndTag(
-    spec: OpenAPIV3.Document,
     operationId: string,
     tag?: string
 ): EnhancedOperationObject | null {
+    const { spec } = useOpenAPIContext();
+
     if (!spec?.paths) return null;
 
     const groupedEndpoints = groupEndpointsByTags(spec.paths);
     const tagEndpoints = groupedEndpoints[tag || 'default'];
 
     if (!tagEndpoints) return null;
-    return tagEndpoints.find(endpoint => endpoint.operationId === operationId) || null;
+    return tagEndpoints.find(endpoint => getOperationId(endpoint) === operationId) || null;
+}
+
+function getOperationId(operation: EnhancedOperationObject) {
+    // Fallback if no operationId is provided
+    if (!operation.operationId) {
+        let formattedPath = operation.path.replace(/\//g, '_');
+        return `${operation.method.toLowerCase()}${formattedPath}`;
+    }
+
+    return operation.operationId;
 }
 
 function getBadgeColor(httpMethod: string): string {
-    const httpMethodColors: Record<OpenAPIV3.HttpMethods, string> = {
-        get: 'bg-green-500',
-        post: 'bg-blue-500',
-        put: 'bg-yellow-500',
-        patch: 'bg-teal-500',
-        delete: 'bg-red-500',
-        options: 'bg-purple-500',
-        head: 'bg-gray-500',
-        trace: 'bg-pink-500'
+    const httpMethodColors: Record<HttpMethod, string> = {
+        GET: 'bg-green-500',
+        POST: 'bg-blue-500',
+        PUT: 'bg-yellow-500',
+        PATCH: 'bg-teal-500',
+        DELETE: 'bg-red-500',
+        OPTIONS: 'bg-purple-500',
+        HEAD: 'bg-gray-500',
+        TRACE: 'bg-pink-500'
     };
 
-    return httpMethodColors[httpMethod.toLowerCase() as OpenAPIV3.HttpMethods] || 'bg-gray-500';
+    return httpMethodColors[httpMethod.toUpperCase() as HttpMethod] || 'bg-gray-500';
 }
 
 export {
@@ -318,5 +337,6 @@ export {
     isValidHttpMethod,
     isNullableSchema,
     renderSchemaType,
-    generateExample
+    generateExample,
+    getOperationId
 };

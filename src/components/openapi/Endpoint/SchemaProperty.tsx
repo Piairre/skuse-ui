@@ -1,15 +1,15 @@
 import React from 'react';
-import {OpenAPIV3} from 'openapi-types';
 import {Badge} from "@/components/ui/badge";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {ChevronDown, ChevronRight} from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {isNullableSchema, renderSchemaType} from "@/utils/openapi";
 import ExternalDocsLink from "@/components/openapi/Endpoint/ExternalDocsLink";
+import {SchemaObject} from "@/types/unified-openapi-types";
 
 interface SchemaPropertyProps {
     name?: string;
-    schema: OpenAPIV3.SchemaObject;
+    schema: SchemaObject;
     required?: boolean;
     isRoot?: boolean;
 }
@@ -23,11 +23,11 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
     const [isOpen, setIsOpen] = React.useState(isRoot);
 
     const isArrayOfObjects = schema.type === 'array' &&
-        (schema.items as OpenAPIV3.SchemaObject).type === 'object';
+        (schema.items as SchemaObject).type === 'object';
 
     const hasChildren = (schema.type === 'object' && schema.properties) ||
         (schema.type === 'array' && schema.items &&
-            (schema.items as OpenAPIV3.SchemaObject).properties) ||
+            (schema.items as SchemaObject).properties) ||
         (schema.oneOf && schema.oneOf.length > 0) ||
         (schema.anyOf && schema.anyOf.length > 0);
 
@@ -142,7 +142,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                 <CollapsibleContent className="ml-6">
                     {schema.anyOf ? (
                         <div className="space-y-0 mt-2">
-                            {schema.anyOf.map((subSchema: OpenAPIV3.SchemaObject, index) => {
+                            {schema.anyOf.map((subSchema: SchemaObject, index) => {
                                 if (isNullableSchema(subSchema)) {
                                     return (
                                         <div key={index} className="py-1">
@@ -169,22 +169,21 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                             {schema.oneOf.map((subSchema, index) => (
                                 <SchemaProperty
                                     key={index}
-                                    schema={subSchema as OpenAPIV3.SchemaObject}
+                                    schema={subSchema}
                                     isRoot={false}
                                 />
                             ))}
                         </div>
                     ) : isArrayOfObjects ? (
                         <div className="space-y-0 mt-2">
-                            {Object.entries((schema.items as OpenAPIV3.SchemaObject).properties || {})
+                            {Object.entries(schema.items?.properties || {})
                                 .map(([propName, propSchema]) => (
                                     <div key={propName} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
                                         <SchemaProperty
                                             key={propName}
                                             name={propName}
-                                            schema={propSchema as OpenAPIV3.SchemaObject}
-                                            required={(schema.items as OpenAPIV3.SchemaObject)
-                                                .required?.includes(propName)}
+                                            schema={propSchema}
+                                            required={schema.items?.required?.includes(propName)}
                                             isRoot={false}
                                         />
                                     </div>
@@ -199,7 +198,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                                             <SchemaProperty
                                                 key={propName}
                                                 name={propName}
-                                                schema={propSchema as OpenAPIV3.SchemaObject}
+                                                schema={propSchema}
                                                 required={schema.required?.includes(propName)}
                                                 isRoot={false}
                                             />
@@ -208,10 +207,10 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                                 </div>
                             )}
                             {schema.type === 'array' && schema.items &&
-                                (schema.items as OpenAPIV3.SchemaObject).properties && (
+                                schema.items.properties && (
                                     <div className="mt-2 border-l-2 border-slate-200 dark:border-slate-700 pl-4">
                                         <SchemaProperty
-                                            schema={schema.items as OpenAPIV3.SchemaObject}
+                                            schema={schema.items}
                                             isRoot={false}
                                         />
                                     </div>

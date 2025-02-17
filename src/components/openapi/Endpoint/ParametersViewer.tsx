@@ -1,16 +1,16 @@
 import React from 'react';
-import {OpenAPIV3} from 'openapi-types';
 import {Badge} from "@/components/ui/badge";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {ChevronDown, ChevronRight} from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { renderSchemaType } from '@/utils/openapi';
+import {ParameterObject, SchemaObject} from "@/types/unified-openapi-types";
 
 type ParameterLocation = 'query' | 'path' | 'header' | 'cookie';
 
 interface ParametersViewerProps {
-    parameters: OpenAPIV3.ParameterObject[];
+    parameters: ParameterObject[];
 }
 
 const LocationTab: React.FC<{
@@ -37,11 +37,11 @@ const LocationTab: React.FC<{
 };
 
 const NestedProperties: React.FC<{
-    schema: OpenAPIV3.SchemaObject;
+    schema: SchemaObject;
     parameterLocation: ParameterLocation;
 }> = ({ schema, parameterLocation }) => {
     if (schema.type === 'array' && schema.items) {
-        const itemSchema = schema.items as OpenAPIV3.SchemaObject;
+        const itemSchema = schema.items as SchemaObject;
         return (
             <div className="space-y-1 mt-2">
                 <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
@@ -54,9 +54,9 @@ const NestedProperties: React.FC<{
                                 parameter={{
                                     name: propName,
                                     in: parameterLocation,
-                                    schema: propSchema as OpenAPIV3.SchemaObject,
+                                    schema: propSchema as SchemaObject,
                                     required: itemSchema.required?.includes(propName)
-                                } as OpenAPIV3.ParameterObject}
+                                }}
                                 isRoot={false}
                             />
                         </div>
@@ -75,9 +75,9 @@ const NestedProperties: React.FC<{
                             parameter={{
                                 name: propName,
                                 in: parameterLocation,
-                                schema: propSchema as OpenAPIV3.SchemaObject,
+                                schema: propSchema as SchemaObject,
                                 required: schema.required?.includes(propName)
-                            } as OpenAPIV3.ParameterObject}
+                            }}
                             isRoot={false}
                         />
                     </div>
@@ -98,8 +98,8 @@ const NestedProperties: React.FC<{
                             parameter={{
                                 name: `option${index + 1}`,
                                 in: parameterLocation,
-                                schema: subSchema as OpenAPIV3.SchemaObject
-                            } as OpenAPIV3.ParameterObject}
+                                schema: subSchema as SchemaObject
+                            }}
                             isRoot={false}
                         />
                     </div>
@@ -120,8 +120,8 @@ const NestedProperties: React.FC<{
                             parameter={{
                                 name: `option${index + 1}`,
                                 in: parameterLocation,
-                                schema: subSchema as OpenAPIV3.SchemaObject
-                            } as OpenAPIV3.ParameterObject}
+                                schema: subSchema as SchemaObject
+                            }}
                             isRoot={false}
                         />
                     </div>
@@ -142,8 +142,8 @@ const NestedProperties: React.FC<{
                             parameter={{
                                 name: `condition${index + 1}`,
                                 in: parameterLocation,
-                                schema: subSchema as OpenAPIV3.SchemaObject
-                            } as OpenAPIV3.ParameterObject}
+                                schema: subSchema as SchemaObject
+                            }}
                             isRoot={false}
                         />
                     </div>
@@ -156,11 +156,11 @@ const NestedProperties: React.FC<{
 };
 
 const ParameterProperty: React.FC<{
-    parameter: OpenAPIV3.ParameterObject;
+    parameter: ParameterObject;
     isRoot?: boolean;
 }> = ({ parameter, isRoot = false }) => {
     const [isOpen, setIsOpen] = React.useState(isRoot);
-    const schema = parameter.schema as OpenAPIV3.SchemaObject;
+    const schema = parameter.schema;
 
     const hasChildren =
         (schema?.type === 'object' && !!schema.properties) ||
@@ -289,7 +289,7 @@ const ParametersViewer: React.FC<ParametersViewerProps> = ({ parameters }) => {
             }
             acc[location].push(param);
             return acc;
-        }, {} as Record<ParameterLocation, OpenAPIV3.ParameterObject[]>);
+        }, {} as Record<ParameterLocation, ParameterObject[]>);
     }, [parameters]);
 
     const locations = Object.keys(groupedParameters) as ParameterLocation[];

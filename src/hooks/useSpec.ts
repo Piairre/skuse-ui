@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { OpenAPIV3 } from 'openapi-types';
 import { useOpenAPIContext } from './OpenAPIContext';
 import {resolveOpenAPIDocument} from "@/utils/openapi";
+import {OpenAPIInputDocument} from "@/types/unified-openapi-types";
 
 export function useSpec({ openApiUrl }: { openApiUrl: string }) {
     const {
@@ -23,8 +23,8 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
                     throw new Error(`HTTP error ! Status: ${response.status}`);
                 }
 
-                const spec: OpenAPIV3.Document = await response.json();
-                const resolvedSpec = resolveOpenAPIDocument(spec);
+                const rawSpec: OpenAPIInputDocument = await response.json();
+                const resolvedSpec = resolveOpenAPIDocument(rawSpec);
 
                 setSpec(resolvedSpec);
             } catch (err) {

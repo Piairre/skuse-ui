@@ -1,13 +1,13 @@
 import React from 'react';
-import {OpenAPIV3} from 'openapi-types';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
 import SchemaProperty from './SchemaProperty';
-import {generateExample, isNullableSchema} from "@/utils/openapi";
+import {generateExample} from "@/utils/openapi";
+import {ResponseObject, SchemaObject} from "@/types/unified-openapi-types";
 
 interface ResponseViewerProps {
-    responses: {[code: string]: OpenAPIV3.ResponseObject}
+    responses: {[code: string]: ResponseObject}
 }
 
 const STATUS_STYLES = {
@@ -61,7 +61,7 @@ const StatusTab: React.FC<{
 };
 
 const SchemaViewer: React.FC<{
-    schema: OpenAPIV3.SchemaObject;
+    schema: SchemaObject;
     contentType: string;
     description?: string;
 }> = ({ schema }) => {
@@ -93,7 +93,7 @@ const SchemaViewer: React.FC<{
 
 interface ContentTypeTabProps {
     contentType: string;
-    schema: OpenAPIV3.SchemaObject;
+    schema: SchemaObject;
     description?: string;
 }
 
@@ -117,7 +117,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
     const [activeTab, setActiveTab] = React.useState<string>(defaultTab);
     const [activeContentType, setActiveContentType] = React.useState<string | null>(null);
 
-    const getContentTypes = (response: OpenAPIV3.ResponseObject): string[] => {
+    const getContentTypes = (response: ResponseObject): string[] => {
         if (!response.content) return [];
         return Object.keys(response.content);
     };
@@ -196,7 +196,8 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                                         <TabsContent key={contentType} value={contentType}>
                                                             <ContentTypeTab
                                                                 contentType={contentType}
-                                                                schema={content.schema as OpenAPIV3.SchemaObject}
+                                                                schema={content.schema
+                                                            }
                                                                 description={response.description}
                                                             />
                                                         </TabsContent>
@@ -206,7 +207,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                         ) : contentTypes[0] && response.content?.[contentTypes[0]]?.schema ? (
                                             <ContentTypeTab
                                                 contentType={contentTypes[0]}
-                                                schema={response.content?.[contentTypes[0]]?.schema as OpenAPIV3.SchemaObject}
+                                                schema={response.content?.[contentTypes[0]]?.schema as SchemaObject}
                                                 description={response.description}
                                             />
                                         ) : null}

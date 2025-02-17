@@ -1,17 +1,16 @@
 import React from 'react';
-import {Card, CardHeader, CardTitle, CardContent} from "@/components/ui/card";
-import {ShieldCheck, Lock} from 'lucide-react';
-import {OpenAPIV3} from 'openapi-types';
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { ShieldCheck, Lock } from 'lucide-react';
 import AuthDialog from './AuthDialog';
-import {Button} from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { SecuritySchemeObject } from "@/types/unified-openapi-types";
 
 interface AuthProps {
-    securitySchemes: {
-        [key: string]: OpenAPIV3.SecuritySchemeObject
-    } | null;
+    securitySchemes?: Record<string, SecuritySchemeObject>;
 }
 
-const Auth: React.FC<AuthProps> = ({securitySchemes}) => {
+const Auth: React.FC<AuthProps> = ({ securitySchemes }) => {
+    const hasSecuritySchemes = securitySchemes && Object.keys(securitySchemes).length > 0;
 
     return (
         <Card>
@@ -22,9 +21,9 @@ const Auth: React.FC<AuthProps> = ({securitySchemes}) => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                {securitySchemes === null ? (
+                {!hasSecuritySchemes ? (
                     <Button
-                        variant={"secondary"}
+                        variant="secondary"
                         className="w-full p-2 border rounded-lg cursor-not-allowed"
                     >
                         No authentication methods available

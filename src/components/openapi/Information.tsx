@@ -15,16 +15,6 @@ import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 const Information: React.FC = () => {
     const {spec} = useOpenAPIContext();
 
-    // Provide default values and handle potential undefined cases
-    const info = spec?.info ?? {
-        title: 'API Documentation',
-        version: '1.0.0',
-        description: '',
-        contact: undefined,
-        license: undefined,
-        termsOfService: undefined
-    };
-
     return (
         <Card className="w-full mx-auto">
             <CardHeader>
@@ -32,32 +22,32 @@ const Information: React.FC = () => {
                     <div className="flex">
                         <Badge variant="outline"
                                className="border-black dark:border-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black flex justify-center items-center px-3 py-1 me-2">
-                            API: {info.version}
+                            API: {spec.info.version}
                         </Badge>
                         <Badge variant="outline"
                                className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white flex justify-center items-center px-3 py-1 me-2">
-                            OAS: {spec?.openapi}
+                            OAS: {spec?.openapi || spec?.swagger}
                         </Badge>
                     </div>
 
                     <div>
                         <div className="flex justify-end">
-                            {info.contact?.email && (
+                            {spec.info.contact?.email && (
                                 <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                    <a href={`mailto:${info.contact.email}`}
+                                    <a href={`mailto:${spec.info.contact.email}`}
                                        className="flex items-center hover:underline">
                                         <Mail className="w-4 h-4 me-2 text-primary"/>
-                                        {info.contact.email}
+                                        {spec.info.contact.email}
                                     </a>
                                 </Badge>
                             )}
 
-                            {info.contact?.url && (
+                            {spec.info.contact?.url && (
                                 <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                    <a href={info.contact.url} target="_blank" rel="noopener noreferrer"
+                                    <a href={spec.info.contact.url} target="_blank" rel="noopener noreferrer"
                                        className="flex items-center hover:underline">
                                         <Earth className="w-4 h-4 me-2 text-primary"/>
-                                        {info.contact.url}
+                                        {spec.info.contact.url}
                                     </a>
                                 </Badge>
                             )}
@@ -74,21 +64,21 @@ const Information: React.FC = () => {
                         </div>
 
                         <div className="flex justify-end">
-                            {info.license && (
+                            {spec.info.license && (
                                 <Badge variant="secondary"
                                        className="flex justify-center items-center px-3 py-1 me-2 mt-1">
-                                    <a href={info.license.url} target="_blank" rel="noopener noreferrer"
+                                    <a href={spec.info.license.url} target="_blank" rel="noopener noreferrer"
                                        className="flex items-center hover:underline">
                                         <Scale className="w-4 h-4 me-2 text-primary"/>
-                                        {info.license.name}
+                                        {spec.info.license.name}
                                     </a>
                                 </Badge>
                             )}
 
-                            {info.termsOfService && (
+                            {spec.info.termsOfService && (
                                 <Badge variant="secondary"
                                        className="flex justify-center items-center px-3 py-1 me-2 mt-1">
-                                    <a href={info.termsOfService} target="_blank" rel="noopener noreferrer"
+                                    <a href={spec.info.termsOfService} target="_blank" rel="noopener noreferrer"
                                        className="flex items-center hover:underline">
                                         <ExternalLink className="w-4 h-4 me-2 text-primary"/>
                                         Terms of Service
@@ -101,17 +91,17 @@ const Information: React.FC = () => {
                 </div>
 
                 <CardTitle className="text-2xl font-bold">
-                    {info.title}
+                    {spec.info.title}
                 </CardTitle>
             </CardHeader>
             <CardContent>
                 <div className="grid lg:grid-cols-2 gap-2 mb-2">
-                    <Servers servers={spec?.servers ?? []}/>
-                    <Auth securitySchemes={spec?.components?.securitySchemes ?? null}/>
+                    <Servers servers={spec.servers ?? []}/>
+                    <Auth securitySchemes={spec.components?.securitySchemes}/>
                 </div>
 
-                {info.description && (
-                    <FormattedMarkdown className={"p-6"} style={{wordBreak: 'break-word'}} markdown={info.description}/>
+                {spec.info.description && (
+                    <FormattedMarkdown className={"p-6"} style={{wordBreak: 'break-word'}} markdown={spec.info.description}/>
                 )}
             </CardContent>
         </Card>
