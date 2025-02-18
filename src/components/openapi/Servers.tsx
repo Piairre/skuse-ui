@@ -179,7 +179,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                 </PopoverContent>
                             </Popover>
                             {computedUrl && hasVariables && (
-                                <span className="block text-sm mt-2">{computedUrl}</span>
+                                <span className="block text-xs mt-1">Computed URL: {computedUrl}</span>
                             )}
                         </div>
                     </div>
