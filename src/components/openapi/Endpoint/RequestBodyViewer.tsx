@@ -68,7 +68,6 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                     return (
                         <TabsContent key={contentType} value={contentType} className="mt-4">
                             <div className="space-y-6">
-                                {/* Schema */}
                                 <div className="space-y-2">
                                     <h3 className="text-base font-medium dark:text-gray-100">Request Schema</h3>
                                     <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 space-y-1">
@@ -83,11 +82,8 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                                     <h3 className="text-base font-medium dark:text-gray-100">Example Request</h3>
                                     <div>
                                         <FormattedMarkdown
-                                            markdown={`\`\`\`json\n${JSON.stringify(
-                                                (content.schema as SchemaObject).example || generateExample(content.schema as SchemaObject),
-                                                null,
-                                                2
-                                            )}\n\`\`\``}
+                                            markdown={JSON.stringify(content.schema.example || generateExample(content.schema), null, 2)}
+                                            languageCode={'json'}
                                             className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
                                         />
                                     </div>
