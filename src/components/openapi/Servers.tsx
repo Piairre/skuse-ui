@@ -1,13 +1,13 @@
-import React, {useEffect, useState} from 'react';
-import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
-import {Input} from "@/components/ui/input";
-import {Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList} from "@/components/ui/command";
-import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
-import {Button} from "@/components/ui/button";
-import {Check, ChevronsUpDown, ServerIcon} from 'lucide-react';
-import {cn} from "@/lib/utils";
-import {ServerObject} from '@/types/unified-openapi-types';
-import {useOpenAPIContext} from '@/hooks/OpenAPIContext';
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Check, ChevronsUpDown, ServerIcon } from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { ServerObject } from '@/types/unified-openapi-types';
+import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 
 interface ServerVariable {
     enum?: string[];
@@ -19,81 +19,112 @@ interface ServerBlockProps {
     servers: ServerObject[];
 }
 
-const getDefaultServer = () => ({
-    url: `${window.location.protocol}//${window.location.host}`,
-    description: 'Current Skuse instance'
-});
+interface VariableSelectorProps {
+    name: string;
+    variable: ServerVariable;
+    value: string;
+    onChange: (name: string, value: string) => void;
+}
 
+const VariableSelector: React.FC<VariableSelectorProps> = ({ name, variable, value, onChange }) => {
+    const [open, setOpen] = useState(false);
+
+    if (variable.enum) {
+        return (
+            <Popover open={open} onOpenChange={setOpen}>
+                <PopoverTrigger asChild>
+                    <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between"
+                    >
+                        {value || `Select ${name}`}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50"/>
+                    </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
+                    <Command>
+                        <CommandInput placeholder={`Search ${name}...`}/>
+                        <CommandList>
+                            <CommandEmpty>No option found</CommandEmpty>
+                            <CommandGroup>
+                                {variable.enum.map((option) => (
+                                    <CommandItem
+                                        key={option}
+                                        value={option}
+                                        onSelect={() => {
+                                            onChange(name, option);
+                                            setOpen(false);
+                                        }}
+                                    >
+                                        <Check className={cn(
+                                            "mr-2 h-4 w-4",
+                                            value === option ? "opacity-100" : "opacity-0"
+                                        )}/>
+                                        {option}
+                                    </CommandItem>
+                                ))}
+                            </CommandGroup>
+                        </CommandList>
+                    </Command>
+                </PopoverContent>
+            </Popover>
+        );
+    }
+
+    return (
+        <Input
+            value={value}
+            onChange={(e) => onChange(name, e.target.value)}
+            placeholder={`Enter ${name}`}
+        />
+    );
+};
 
 const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
     const { computedUrl, setComputedUrl, serverVariables, setServerVariables } = useOpenAPIContext();
     const [openServerPopover, setOpenServerPopover] = useState(false);
-    const defaultServer = {
-        url: '/',
-        description: 'Current instance'
-    };
+
+    const defaultServer = { url: '/', description: 'Current instance' };
     const effectiveServers = servers.length > 0 ? servers : [defaultServer];
-    const [selectedServer, setSelectedServer] = useState<ServerObject>(effectiveServers[0] || getDefaultServer());
-    const [openVariablePopovers, setOpenVariablePopovers] = useState<Record<string, boolean>>({});
-
-    const getCurrentUrl = () => {
-        return `${window.location.protocol}//${window.location.host}`;
-    };
-
-    // Initialisation des variables par défaut uniquement si elles n'existent pas déjà
-    useEffect(() => {
-        if (selectedServer?.variables && Object.keys(serverVariables).length === 0) {
-            const defaultVars: Record<string, string> = {};
-            Object.entries(selectedServer.variables).forEach(([key, value]) => {
-                defaultVars[key] = value.default || '';
-            });
-            setServerVariables(defaultVars);
-        }
-    }, [selectedServer, serverVariables, setServerVariables]);
-
-    useEffect(() => {
-        if (selectedServer) {
-            let url = selectedServer.url;
-
-            if (url === '/' || !servers.length) {
-                url = getCurrentUrl();
-            }
-
-            Object.entries(serverVariables).forEach(([key, value]) => {
-                url = url.replace(`{${key}}`, value);
-            });
-
-            setComputedUrl(url);
-        }
-    }, [selectedServer, serverVariables, setComputedUrl, servers.length]);
-
-    const handleVariableChange = (name: string, value: string) => {
-        setServerVariables({
-            ...serverVariables,
-            [name]: value
-        });
-        setOpenVariablePopovers(prev => ({
-            ...prev,
-            [name]: false
-        }));
-    };
+    const [selectedServer, setSelectedServer] = useState<ServerObject>(effectiveServers[0] as ServerObject);
 
     const handleServerSelect = (server: ServerObject) => {
         setSelectedServer(server);
         setOpenServerPopover(false);
-        // Réinitialiser les variables si on change de serveur
+
+        let newUrl = server.url === '/' ?
+            `${window.location.protocol}//${window.location.host}` :
+            server.url;
+
         if (server.variables) {
             const defaultVars: Record<string, string> = {};
             Object.entries(server.variables).forEach(([key, value]) => {
                 defaultVars[key] = value.default || '';
+                newUrl = newUrl.replace(`{${key}}`, value.default || '');
             });
             setServerVariables(defaultVars);
         } else {
             setServerVariables({});
         }
+
+        setComputedUrl(newUrl);
     };
 
-    const hasVariables = selectedServer?.variables && Object.entries(selectedServer.variables).length > 0;
+    const handleVariableChange = (name: string, value: string) => {
+        const newVariables = { ...serverVariables, [name]: value };
+        setServerVariables(newVariables);
+
+        let newUrl = selectedServer.url;
+        Object.entries(newVariables).forEach(([key, val]) => {
+            newUrl = newUrl.replace(`{${key}}`, val);
+        });
+        setComputedUrl(newUrl);
+    };
+
+    const hasVariables = selectedServer?.variables &&
+        Object.entries(selectedServer.variables).length > 0;
 
     return (
         <Card>
@@ -119,8 +150,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                         <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50"/>
                                     </Button>
                                 </PopoverTrigger>
-
-                                <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
+                                <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
                                     <Command>
                                         <CommandList>
                                             <CommandEmpty>No server found</CommandEmpty>
@@ -131,18 +161,14 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                                         value={server.url}
                                                         onSelect={() => handleServerSelect(server)}
                                                     >
-                                                        <Check
-                                                            className={cn(
-                                                                "mr-2 h-4 w-4",
-                                                                selectedServer?.url === server.url ? "opacity-100" : "opacity-0"
-                                                            )}
-                                                        />
+                                                        <Check className={cn(
+                                                            "mr-2 h-4 w-4",
+                                                            selectedServer?.url === server.url ? "opacity-100" : "opacity-0"
+                                                        )}/>
                                                         <div>
                                                             <p>{server.url}</p>
                                                             {server.description && (
-                                                                <p className="text-xs">
-                                                                    {server.description}
-                                                                </p>
+                                                                <p className="text-xs">{server.description}</p>
                                                             )}
                                                         </div>
                                                     </CommandItem>
@@ -153,9 +179,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                 </PopoverContent>
                             </Popover>
                             {computedUrl && hasVariables && (
-                                <span className="block text-sm mt-2">
-                                    {computedUrl}
-                                </span>
+                                <span className="block text-sm mt-2">{computedUrl}</span>
                             )}
                         </div>
                     </div>
@@ -163,70 +187,20 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                     {hasVariables && (
                         <div className="px-2 max-h-96 overflow-y-auto">
                             <div className="grid grid-cols-2 gap-8">
-                                {Object.entries(selectedServer.variables ?? []).map(([name, variable]) => (
+                                {Object.entries(selectedServer.variables ?? {}).map(([name, variable]) => (
                                     <div key={name} className="space-y-2 my-2">
                                         <label className="ms-2 text-sm font-medium block">
                                             {name}
                                             {variable.description && (
-                                                <span className="ml-2 text-xs">
-                                                    {variable.description}
-                                                </span>
+                                                <span className="ml-2 text-xs">{variable.description}</span>
                                             )}
                                         </label>
-                                        {(variable as ServerVariable).enum ? (
-                                            <Popover
-                                                open={openVariablePopovers[name]}
-                                                onOpenChange={(open) =>
-                                                    setOpenVariablePopovers(prev => ({
-                                                        ...prev,
-                                                        [name]: open
-                                                    }))
-                                                }
-                                            >
-                                                <PopoverTrigger asChild>
-                                                    <Button
-                                                        variant="outline"
-                                                        role="combobox"
-                                                        aria-expanded={openVariablePopovers[name]}
-                                                        className="w-full justify-between"
-                                                    >
-                                                        {serverVariables[name] || `Select ${name}`}
-                                                        <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50"/>
-                                                    </Button>
-                                                </PopoverTrigger>
-                                                <PopoverContent className="p-0 w-[--radix-popover-trigger-width]">
-                                                    <Command>
-                                                        <CommandInput placeholder={`Search ${name}...`}/>
-                                                        <CommandList>
-                                                            <CommandEmpty>No option found</CommandEmpty>
-                                                            <CommandGroup>
-                                                                {(variable as ServerVariable).enum?.map((option) => (
-                                                                    <CommandItem
-                                                                        key={option}
-                                                                        value={option}
-                                                                        onSelect={() => handleVariableChange(name, option)}
-                                                                    >
-                                                                        <Check
-                                                                            className={cn(
-                                                                                "mr-2 h-4 w-4",
-                                                                                serverVariables[name] === option ? "opacity-100" : "opacity-0"
-                                                                            )}
-                                                                        />
-                                                                        {option}
-                                                                    </CommandItem>
-                                                                ))}
-                                                            </CommandGroup>
-                                                        </CommandList>
-                                                    </Command>
-                                                </PopoverContent>
-                                            </Popover>
-                                        ) : (
-                                            <Input
-                                                value={serverVariables[name]}
-                                                onChange={(e) => handleVariableChange(name, e.target.value)}
-                                                placeholder={`Enter ${name}`}
-                                            />
-                                        )}
+                                        <VariableSelector
+                                            name={name}
+                                            variable={variable}
+                                            value={serverVariables[name] || variable.default || ''}
+                                            onChange={handleVariableChange}
+                                        />
                                     </div>
                                 ))}
                             </div>
