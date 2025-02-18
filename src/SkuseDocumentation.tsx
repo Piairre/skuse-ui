@@ -24,7 +24,7 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
                 <div className="w-70 border-r sticky top-0 h-screen overflow-y-auto">
                     <Sidebar />
                 </div>
-                <div className="flex-1 overflow-y-auto p-2">
+                <div className="flex-1 overflow-y-auto m-2">
                     {showMinimifiedInfo && <MinimifiedInfo />}
                     <Outlet />
                 </div>
