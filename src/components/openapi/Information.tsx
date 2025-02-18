@@ -101,7 +101,7 @@ const Information: React.FC = () => {
                 </div>
 
                 {spec.info.description && (
-                    <FormattedMarkdown className={"p-6"} style={{wordBreak: 'break-word'}} markdown={spec.info.description}/>
+                    <FormattedMarkdown className={"p-6"} style={{wordBreak: 'break-word'}} markdown={spec.info.description} maxLength={5000}/>
                 )}
             </CardContent>
         </Card>

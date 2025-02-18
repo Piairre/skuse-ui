@@ -78,11 +78,8 @@ const SchemaViewer: React.FC<{
                 <h3 className="text-base font-medium dark:text-gray-100">Example Response</h3>
                 <div>
                     <FormattedMarkdown
-                        markdown={`\`\`\`json\n${JSON.stringify(
-                            schema?.example || generateExample(schema),
-                            null,
-                            2
-                        )}\n\`\`\``}
+                        markdown={JSON.stringify(schema?.example || generateExample(schema), null, 2)}
+                        languageCode={'json'}
                         className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
                     />
                 </div>

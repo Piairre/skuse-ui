@@ -49,7 +49,7 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                 )}
 
                 {operation.description && (
-                    <FormattedMarkdown markdown={operation.description} />
+                    <FormattedMarkdown markdown={operation.description} maxLength={1000} />
                 )}
             </div>
 

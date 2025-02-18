@@ -6,7 +6,7 @@ import * as postman from 'postman-collection';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
-import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
+import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 
 interface CodeExamplesProps {
     method: string;
@@ -14,65 +14,104 @@ interface CodeExamplesProps {
     requestBody?: string;
 }
 
-type Language = {
+interface LanguageVariant {
+    key: string;
+    label: string;
+}
+
+interface Language {
     key: string;
     label: string;
     syntax_mode: string;
-    variants: { key: string; label: string }[];
+    variants: LanguageVariant[];
+}
+
+interface FlattenedLanguage {
+    language: Language;
+    variant?: string;
+}
+
+interface PostmanRequestOptions {
+    indentCount: number;
+    indentType: 'Space' | 'Tab';
+    trimRequestBody: boolean;
+    followRedirect: boolean;
+}
+
+type ConvertCallback = (error: Error | null, snippet: string) => void;
+
+const DEFAULT_REQUEST_OPTIONS: PostmanRequestOptions = {
+    indentCount: 2,
+    indentType: 'Space',
+    trimRequestBody: true,
+    followRedirect: true,
 };
 
-type FlattenLanguage = { language: Language; variant?: string };
-
-const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody}) => {
-    const {computedUrl} = useOpenAPIContext();
-    const [languages, setLanguages] = useState<FlattenLanguage[]>([]);
-    const [selectedLanguage, setSelectedLanguage] = useState<{ language: Language; variant?: string } | null>(null);
+const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }) => {
+    const { computedUrl } = useOpenAPIContext();
+    const [languages, setLanguages] = useState<FlattenedLanguage[]>([]);
+    const [selectedLanguage, setSelectedLanguage] = useState<FlattenedLanguage | null>(null);
     const [snippet, setSnippet] = useState<string>('');
-    const [open, setOpen] = useState(false);
+    const [open, setOpen] = useState<boolean>(false);
 
     useEffect(() => {
         const langs: Language[] = getLanguageList();
-        const flattenedLanguages = langs.flatMap(lang =>
+        const flattenedLanguages: FlattenedLanguage[] = langs.flatMap(lang =>
             lang.variants.length > 0
                 ? lang.variants.map(variant => ({ language: lang, variant: variant.key }))
                 : [{ language: lang }]
         );
         setLanguages(flattenedLanguages);
+
         if (flattenedLanguages.length > 0) {
-            setSelectedLanguage(flattenedLanguages[0] as FlattenLanguage);
+            setSelectedLanguage(flattenedLanguages[0] as FlattenedLanguage);
         }
     }, []);
 
     useEffect(() => {
-        if (!selectedLanguage) return;
+        if (!selectedLanguage || !computedUrl) return;
+
         try {
             const request = new postman.Request({
                 method: method.toUpperCase(),
                 url: `${computedUrl}${path}`,
                 ...(requestBody && {
-                    body: { mode: 'raw', raw: requestBody, options: { raw: { language: 'json' } } }
+                    body: {
+                        mode: 'raw' as const,
+                        raw: requestBody,
+                        options: {
+                            raw: { language: 'json' as const }
+                        }
+                    }
                 })
             });
+
+            const handleConversion: ConvertCallback = (error, generatedSnippet) => {
+                if (error) {
+                    console.error('Snippet generation error:', error);
+                    setSnippet('Could not generate snippet');
+                    return;
+                }
+                setSnippet(generatedSnippet);
+            };
 
             convert(
                 selectedLanguage.language.key,
                 selectedLanguage.variant || '',
                 request,
-                { indentCount: 2, indentType: 'Space', trimRequestBody: true, followRedirect: true },
-                (error, generatedSnippet) => {
-                    if (error) {
-                        setSnippet('Could not generate snippet');
-                        return;
-                    }
-
-                    // Generate snippet with triple backticks for markdown
-                    setSnippet(`\`\`\`${selectedLanguage.language.syntax_mode}\n${generatedSnippet}\n\`\`\``);
-                }
+                DEFAULT_REQUEST_OPTIONS,
+                handleConversion
             );
         } catch (error) {
+            console.error('Request creation error:', error);
             setSnippet('Could not generate snippet');
         }
-    }, [method, path, requestBody, selectedLanguage]);
+    }, [method, path, requestBody, selectedLanguage, computedUrl]);
+
+    const handleLanguageSelect = (language: Language, variant?: string) => {
+        setSelectedLanguage({ language, variant });
+        setOpen(false);
+    };
 
     return (
         <div className="space-y-4">
@@ -81,7 +120,8 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody})
                 <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="outline" className="flex items-center gap-2">
-                            <Braces className="w-4 h-4" /> {selectedLanguage?.language.label}
+                            <Braces className="w-4 h-4" />
+                            {selectedLanguage?.language.label}
                             {selectedLanguage?.variant ? ` (${selectedLanguage.variant})` : ""}
                         </Button>
                     </PopoverTrigger>
@@ -92,10 +132,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody})
                                 {languages.map(({ language, variant }) => (
                                     <CommandItem
                                         key={variant ? `${language.key}:${variant}` : language.key}
-                                        onSelect={() => {
-                                            setSelectedLanguage({ language, variant });
-                                            setOpen(false);
-                                        }}
+                                        onSelect={() => handleLanguageSelect(language, variant)}
                                     >
                                         {language.label} {variant ? `(${variant})` : ""}
                                     </CommandItem>
@@ -107,6 +144,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody})
             </div>
             <FormattedMarkdown
                 markdown={snippet}
+                languageCode={selectedLanguage?.language.syntax_mode ?? ''}
                 className="[&_code]:!whitespace-pre-wrap"
             />
         </div>
