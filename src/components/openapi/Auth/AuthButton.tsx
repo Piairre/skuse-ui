@@ -24,7 +24,7 @@ export const AuthorizeButton = React.forwardRef<HTMLButtonElement, { onClick?: (
     )
 );
 
-const AuthButton: React.FC<AuthButtonProps> = ({securitySchemes, variant = 'outline'}) => {
+const AuthButton: React.FC<AuthButtonProps> = ({securitySchemes}) => {
     const hasSecuritySchemes = securitySchemes && Object.keys(securitySchemes).length > 0;
 
     if (!hasSecuritySchemes) {
@@ -43,7 +43,7 @@ const AuthButton: React.FC<AuthButtonProps> = ({securitySchemes, variant = 'outl
 
     return (
         <AuthDialog securitySchemes={securitySchemes}>
-            <AuthorizeButton variant={variant} />
+            <AuthorizeButton />
         </AuthDialog>
     );
 };

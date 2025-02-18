@@ -9,7 +9,6 @@ import {
 } from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import Servers from "@/components/openapi/Servers";
-import Auth from "@/components/openapi/Auth/AuthButton";
 import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 import AuthCard from "@/components/openapi/Auth/AuthCard";
 

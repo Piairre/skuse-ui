@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Home } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 import AuthButton from "@/components/openapi/Auth/AuthButton";
+import { Input } from '../ui/input';
 
 const MinimifiedInfo: React.FC = () => {
     const { spec, computedUrl } = useOpenAPIContext();
@@ -27,11 +28,10 @@ const MinimifiedInfo: React.FC = () => {
 
                     <div className="flex-1 mx-4">
                         <div className="relative w-full max-w-2xl mx-auto">
-                            <input
-                                type="text"
+                            <Input
                                 value={computedUrl}
                                 readOnly
-                                className="w-full h-8 px-3 text-sm bg-muted rounded-md font-mono"
+                                className="h-8 font-mono text-sm bg-muted pr-10"
                             />
                         </div>
                     </div>

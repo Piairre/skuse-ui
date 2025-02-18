@@ -2,13 +2,11 @@ import React, { useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {EnhancedOperationObject, ParameterObject, RequestBodyObject, ResponseObject} from "@/types/openapi";
+import {EnhancedOperationObject} from "@/types/openapi";
 import { getBadgeColor } from "@/utils/openapi";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { PlayCircle, FileJson, Database, Info, Lock } from 'lucide-react';
-import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
@@ -26,8 +24,6 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, className = "" }) => (
 );
 
 const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ operation }) => {
-    const { spec } = useOpenAPIContext();
-
     const [activeTab, setActiveTab] = useState('info');
     const [requestValues] = useState<{
         parameters: Record<string, string>;
@@ -37,12 +33,9 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
         body: ''
     });
 
-    // Résolution des références
-    const parameters = operation.parameters as ParameterObject[] ?? [];
-    const requestBody = operation.requestBody as RequestBodyObject || null;
-    const responses = operation.responses as {[code: string]: | ResponseObject};
-
-    const serverUrl = spec.servers?.[0]?.url || 'https://api.example.com';
+    const parameters = operation.parameters ?? [];
+    const requestBody = operation.requestBody || null;
+    const responses = operation.responses;
 
     const renderInfo = () => (
         <div className="space-y-6">
@@ -185,16 +178,7 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                         <CodeExamples
                             method={operation.method}
                             path={operation.path}
-                            serverUrl={serverUrl}
                             requestBody={requestValues.body}
-                            headers={{
-                                ...(operation.security ? {
-                                    'Authorization': 'Bearer YOUR_API_KEY'
-                                } : {}),
-                                ...(requestBody ? {
-                                    'Content-Type': 'application/json'
-                                } : {})
-                            }}
                         />
                     </div>
                 </div>

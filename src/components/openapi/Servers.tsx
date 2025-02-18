@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Check, ChevronsUpDown, ServerIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { ServerObject } from '@/types/unified-openapi-types';
+import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 
 interface ServerVariable {
     enum?: string[];
@@ -30,39 +31,38 @@ interface ServerBlockProps {
 }
 
 const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
+    const { computedUrl, setComputedUrl, serverVariables, setServerVariables } = useOpenAPIContext();
     const [openServerPopover, setOpenServerPopover] = useState(false);
     const [selectedServer, setSelectedServer] = useState(servers[0] || null);
-    const [variables, setVariables] = useState<Record<string, string>>({});
-    const [computedUrl, setComputedUrl] = useState('');
     const [openVariablePopovers, setOpenVariablePopovers] = useState<Record<string, boolean>>({});
 
+    // Initialisation des variables par défaut uniquement si elles n'existent pas déjà
     useEffect(() => {
-        if (selectedServer?.variables) {
+        if (selectedServer?.variables && Object.keys(serverVariables).length === 0) {
             const defaultVars: Record<string, string> = {};
             Object.entries(selectedServer.variables).forEach(([key, value]) => {
-                defaultVars[key] = (value as ServerVariable).default || '';
+                defaultVars[key] = value.default || '';
             });
-            setVariables(defaultVars);
-        } else {
-            setVariables({});
+            setServerVariables(defaultVars);
         }
-    }, [selectedServer]);
+    }, [selectedServer, serverVariables, setServerVariables]);
 
+    // Mise à jour de l'URL calculée
     useEffect(() => {
         if (selectedServer) {
             let url = selectedServer.url;
-            Object.entries(variables).forEach(([key, value]) => {
+            Object.entries(serverVariables).forEach(([key, value]) => {
                 url = url.replace(`{${key}}`, value);
-                setComputedUrl(url);
             });
+            setComputedUrl(url);
         }
-    }, [selectedServer, variables]);
+    }, [selectedServer, serverVariables, setComputedUrl]);
 
     const handleVariableChange = (name: string, value: string) => {
-        setVariables(prev => ({
-            ...prev,
+        setServerVariables({
+            ...serverVariables,
             [name]: value
-        }));
+        });
         setOpenVariablePopovers(prev => ({
             ...prev,
             [name]: false
@@ -140,7 +140,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                     </PopoverContent>
                                 )}
                             </Popover>
-                            {computedUrl && (
+                            {computedUrl && hasVariables && (
                                 <span className="block text-sm mb-2">
                                     {computedUrl}
                                 </span>
@@ -178,7 +178,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                                         aria-expanded={openVariablePopovers[name]}
                                                         className="w-full justify-between"
                                                     >
-                                                        {variables[name] || `Select ${name}`}
+                                                        {serverVariables[name] || `Select ${name}`}
                                                         <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50"/>
                                                     </Button>
                                                 </PopoverTrigger>
@@ -197,7 +197,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                                                         <Check
                                                                             className={cn(
                                                                                 "mr-2 h-4 w-4",
-                                                                                variables[name] === option ? "opacity-100" : "opacity-0"
+                                                                                serverVariables[name] === option ? "opacity-100" : "opacity-0"
                                                                             )}
                                                                         />
                                                                         {option}
@@ -210,7 +210,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                                             </Popover>
                                         ) : (
                                             <Input
-                                                value={variables[name]}
+                                                value={serverVariables[name]}
                                                 onChange={(e) => handleVariableChange(name, e.target.value)}
                                                 placeholder={`Enter ${name}`}
                                             />
