@@ -13,6 +13,10 @@ const defaultSpec: UnifiedOpenAPI = {
 interface OpenAPIContextType {
     spec: UnifiedOpenAPI;
     setSpec: (spec: UnifiedOpenAPI) => void;
+    computedUrl: string;
+    setComputedUrl: (url: string) => void;
+    serverVariables: Record<string, string>;
+    setServerVariables: (variables: Record<string, string>) => void;
     loading: boolean;
     setLoading: (loading: boolean) => void;
     error: Error | null;
@@ -22,6 +26,10 @@ interface OpenAPIContextType {
 const OpenAPIContext = createContext<OpenAPIContextType>({
     spec: defaultSpec,
     setSpec: () => {},
+    computedUrl: '',
+    setComputedUrl: () => {},
+    serverVariables: {},
+    setServerVariables: () => {},
     loading: false,
     setLoading: () => {},
     error: null,
@@ -30,6 +38,8 @@ const OpenAPIContext = createContext<OpenAPIContextType>({
 
 export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
     const [spec, setSpec] = useState<UnifiedOpenAPI>(defaultSpec);
+    const [computedUrl, setComputedUrl] = useState<string>('');
+    const [serverVariables, setServerVariables] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<Error | null>(null);
 
@@ -38,6 +48,10 @@ export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
             value={{
                 spec,
                 setSpec,
+                computedUrl,
+                setComputedUrl,
+                serverVariables,
+                setServerVariables,
                 loading,
                 setLoading,
                 error,

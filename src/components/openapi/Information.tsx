@@ -9,8 +9,8 @@ import {
 } from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import Servers from "@/components/openapi/Servers";
-import Auth from "@/components/openapi/Auth/AuthButton";
 import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
+import AuthCard from "@/components/openapi/Auth/AuthCard";
 
 const Information: React.FC = () => {
     const {spec} = useOpenAPIContext();
@@ -97,7 +97,7 @@ const Information: React.FC = () => {
             <CardContent>
                 <div className="grid lg:grid-cols-2 gap-2 mb-2">
                     <Servers servers={spec.servers ?? []}/>
-                    <Auth securitySchemes={spec.components?.securitySchemes}/>
+                    <AuthCard securitySchemes={spec.components?.securitySchemes}/>
                 </div>
 
                 {spec.info.description && (

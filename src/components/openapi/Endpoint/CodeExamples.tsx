@@ -1,18 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
-import { Braces, Copy, CheckCheck } from 'lucide-react';
+import { Braces } from 'lucide-react';
 import { convert, getLanguageList } from 'postman-code-generators';
 import * as postman from 'postman-collection';
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Command, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
+import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
 
 interface CodeExamplesProps {
     method: string;
     path: string;
-    serverUrl: string;
     requestBody?: string;
-    headers?: Record<string, string>;
 }
 
 type Language = {
@@ -24,7 +23,8 @@ type Language = {
 
 type FlattenLanguage = { language: Language; variant?: string };
 
-const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, serverUrl, requestBody, headers = {} }) => {
+const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody}) => {
+    const {computedUrl} = useOpenAPIContext();
     const [languages, setLanguages] = useState<FlattenLanguage[]>([]);
     const [selectedLanguage, setSelectedLanguage] = useState<{ language: Language; variant?: string } | null>(null);
     const [snippet, setSnippet] = useState<string>('');
@@ -46,14 +46,9 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, serverUrl, re
     useEffect(() => {
         if (!selectedLanguage) return;
         try {
-            const postmanHeaders = new postman.HeaderList(null,
-                Object.entries(headers).map(([key, value]) => ({ key, value, type: 'text' }))
-            );
-
             const request = new postman.Request({
                 method: method.toUpperCase(),
-                url: `${serverUrl}${path}`,
-                header: postmanHeaders,
+                url: `${computedUrl}${path}`,
                 ...(requestBody && {
                     body: { mode: 'raw', raw: requestBody, options: { raw: { language: 'json' } } }
                 })
@@ -77,7 +72,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, serverUrl, re
         } catch (error) {
             setSnippet('Could not generate snippet');
         }
-    }, [method, path, serverUrl, requestBody, headers, selectedLanguage]);
+    }, [method, path, requestBody, selectedLanguage]);
 
     return (
         <div className="space-y-4">
