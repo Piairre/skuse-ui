@@ -9,8 +9,6 @@ import { Input } from '../ui/input';
 const MinimifiedInfo: React.FC = () => {
     const { spec, computedUrl } = useOpenAPIContext();
 
-    if (!spec) return null;
-
     return (
         <div className={"bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-50 w-full h-14"}>
             <div className="container mx-auto px-4">
