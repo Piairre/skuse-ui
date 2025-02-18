@@ -1,8 +1,9 @@
 import React from 'react';
 import { useSpec } from '@/hooks/useSpec';
 import Sidebar from "@/components/layouts/Sidebar";
-import {Outlet, useLocation} from "@tanstack/react-router";
+import { Outlet, useLocation } from "@tanstack/react-router";
 import MinimifiedInfo from "@/components/layouts/MinimifiedInfo";
+import LayoutSkeleton from '@/components/Skeletons/LayoutSkeleton';
 
 interface SkuseDocumentationProps {
     openApiUrl: string;
@@ -12,7 +13,7 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
     const { spec, error, loading } = useSpec({ openApiUrl });
     const location = useLocation();
 
-    if (loading) return <div>Chargement...</div>;
+    if (loading) return <LayoutSkeleton />;
     if (error) return <div>Erreur : {error.message}</div>;
     if (!spec) return null;
 

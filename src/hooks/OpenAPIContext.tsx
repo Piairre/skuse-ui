@@ -40,7 +40,7 @@ export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [spec, setSpec] = useState<UnifiedOpenAPI>(defaultSpec);
     const [computedUrl, setComputedUrl] = useState<string>('');
     const [serverVariables, setServerVariables] = useState<Record<string, string>>({});
-    const [loading, setLoading] = useState<boolean>(false);
+    const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<Error | null>(null);
 
     return (

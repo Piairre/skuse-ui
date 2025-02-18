@@ -1,20 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { useParams, useNavigate } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import {EnhancedOperationObject} from "@/types/openapi";
-import { getBadgeColor } from "@/utils/openapi";
+import { EnhancedOperationObject } from "@/types/openapi";
+import { getBadgeColor, findOperationByOperationIdAndTag } from "@/utils/openapi";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { PlayCircle, FileJson, Database, Info, Lock } from 'lucide-react';
 import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
 import RequestBodyViewer from "@/components/openapi/Endpoint/RequestBodyViewer";
+import EndpointSkeleton from '@/components/Skeletons/EndpointSkeleton';
+import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 
 interface TabPanelProps {
     children: React.ReactNode;
     className?: string;
+}
+
+interface EndpointContentProps {
+    operation: EnhancedOperationObject;
+}
+
+interface RequestValues {
+    parameters: Record<string, string>;
+    body: string;
 }
 
 const TabPanel: React.FC<TabPanelProps> = ({ children, className = "" }) => (
@@ -23,27 +35,34 @@ const TabPanel: React.FC<TabPanelProps> = ({ children, className = "" }) => (
     </div>
 );
 
-const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ operation }) => {
-    const [activeTab, setActiveTab] = useState('info');
-    const [requestValues] = useState<{
-        parameters: Record<string, string>;
-        body: string;
-    }>({
+const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
+    const [activeTab, setActiveTab] = useState<string>('info');
+    const [requestValues] = useState<RequestValues>({
         parameters: {},
         body: ''
     });
 
-    const parameters = operation.parameters ?? [];
-    const requestBody = operation.requestBody || null;
-    const responses = operation.responses;
+    const { parameters = [], requestBody, responses } = operation;
+
+    const availableTabs = useMemo(() => {
+        const tabs = ['info'];
+        if (parameters.length > 0) tabs.push('parameters');
+        if (requestBody) tabs.push('body');
+        tabs.push('responses');
+        return tabs;
+    }, [parameters.length, requestBody]);
+
+    useEffect(() => {
+        if (!availableTabs.includes(activeTab)) {
+            setActiveTab(availableTabs[0] || 'info');
+        }
+    }, [operation.operationId, availableTabs, activeTab]);
 
     const renderInfo = () => (
         <div className="space-y-6">
-
             <div className="prose prose-slate max-w-none">
-
                 {operation.security && (
-                    <span className={"flex text-xs mb-1"}>
+                    <span className="flex text-xs mb-1">
                         <Lock className="w-4 h-4 me-2" />Authentication Required
                     </span>
                 )}
@@ -81,28 +100,13 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
         <ParametersViewer parameters={parameters} />
     );
 
-    const renderRequestBody = () => {
-        if (!requestBody) return null;
-        return <RequestBodyViewer requestBody={requestBody} />;
-    };
-
-    const renderResponses = () => (
-        <ResponseViewer responses={responses}/>
+    const renderRequestBody = () => (
+        requestBody ? <RequestBodyViewer requestBody={requestBody} /> : null
     );
 
-    const availableTabs = React.useMemo(() => {
-        const tabs = ['info'];
-        if (parameters.length > 0) tabs.push('parameters');
-        if (requestBody) tabs.push('body');
-        tabs.push('responses');
-        return tabs;
-    }, [parameters.length, requestBody]);
-
-    React.useEffect(() => {
-        if (!availableTabs.includes(activeTab)) {
-            setActiveTab(availableTabs[0] || 'info');
-        }
-    }, [operation.operationId, availableTabs, activeTab]);
+    const renderResponses = () => (
+        <ResponseViewer responses={responses} />
+    );
 
     return (
         <Card className="w-full">
@@ -164,7 +168,6 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                                     <TabPanel>{renderRequestBody()}</TabPanel>
                                 </TabsContent>
                             )}
-
                             <TabsContent value="responses">
                                 <TabPanel>{renderResponses()}</TabPanel>
                             </TabsContent>
@@ -172,7 +175,6 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
                     </Tabs>
                 </div>
 
-                {/* Right Column - Code Examples */}
                 <div className="col-span-2 border-l pl-6">
                     <div className="sticky top-4">
                         <CodeExamples
@@ -187,4 +189,31 @@ const EndpointPlayground: React.FC<{ operation: EnhancedOperationObject }> = ({ 
     );
 };
 
-export default EndpointPlayground;
+const EndpointDetails: React.FC = () => {
+    const { tag, operationId } = useParams({
+        from: '/$tag/$operationId'
+    });
+    const { spec, loading } = useOpenAPIContext();
+    const navigate = useNavigate();
+
+    const operation = useMemo(() => {
+        if (!loading && spec) {
+            return findOperationByOperationIdAndTag(operationId, tag);
+        }
+        return null;
+    }, [loading, spec, operationId, tag]);
+
+    useEffect(() => {
+        if (!loading && (!spec || !operation)) {
+            navigate({ to: '/' });
+        }
+    }, [loading, spec, operation, navigate]);
+
+    if (!operation) {
+        return null;
+    }
+
+    return <EndpointContent operation={operation} />;
+};
+
+export default EndpointDetails;
