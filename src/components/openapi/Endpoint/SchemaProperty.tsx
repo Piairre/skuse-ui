@@ -81,45 +81,67 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         return details;
     };
 
+    const renderOneOfOption = (option: SchemaObject, index: number) => {
+        const itemSchema = option.type === 'array' ? option.items as SchemaObject : option;
+        const canCollapse = ['object', 'array'].includes(itemSchema.type as string);
+
+        const content = (
+            <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                    Option {index + 1}
+                </Badge>
+                <Badge variant="outline" className="text-xs border-slate-200 dark:border-slate-700">
+                    {renderSchemaType(option)}
+                </Badge>
+                {option.description && (
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                        {option.description}
+                    </span>
+                )}
+            </div>
+        );
+
+        if (!canCollapse) {
+            return (
+                <div key={index} className="mt-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded">
+                    {content}
+                </div>
+            );
+        }
+
+        return (
+            <div key={index} className="mt-2">
+                <Collapsible>
+                    <CollapsibleTrigger className="flex items-center gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded group">
+                        <ChevronRight className="h-4 w-4 group-data-[state=open]:rotate-90 transition-transform" />
+                        <div className="flex flex-col">
+                            {content}
+                        </div>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="ml-6 mt-2">
+                        <div className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
+                            {Object.entries(itemSchema.properties || {}).map(([propName, propSchema]) => (
+                                <SchemaProperty
+                                    key={propName}
+                                    name={propName}
+                                    schema={propSchema}
+                                    required={itemSchema.required?.includes(propName)}
+                                />
+                            ))}
+                        </div>
+                    </CollapsibleContent>
+                </Collapsible>
+            </div>
+        );
+    };
+
     const renderPropertyContent = () => {
         if (schema.oneOf) {
             return (
                 <div className="pl-4">
-                    {schema.oneOf.map((subSchema: SchemaObject, index) => (
-                        <div key={index} className="mt-2">
-                            <Collapsible>
-                                <CollapsibleTrigger className="flex items-center gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded group">
-                                    <ChevronRight className="h-4 w-4 group-data-[state=open]:rotate-90 transition-transform" />
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-2">
-                                            <Badge variant="outline" className="text-xs">
-                                                Option {index + 1}
-                                            </Badge>
-                                            {subSchema.description && (
-                                                <span className="text-sm text-gray-600 dark:text-gray-400">
-                                                    {subSchema.description}
-                                                </span>
-                                            )}
-                                        </div>
-                                    </div>
-                                </CollapsibleTrigger>
-                                <CollapsibleContent className="ml-6 mt-2">
-                                    {subSchema.properties && (
-                                        <div className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                                            {Object.entries(subSchema.properties).map(([propName, propSchema]) => (
-                                                <SchemaProperty
-                                                    key={propName}
-                                                    name={propName}
-                                                    schema={propSchema}
-                                                    required={subSchema.required?.includes(propName)}
-                                                />
-                                            ))}
-                                        </div>
-                                    )}
-                                </CollapsibleContent>
-                            </Collapsible>
-                        </div>
-                    ))}
+                    {schema.oneOf.map((subSchema: SchemaObject, index) =>
+                        renderOneOfOption(subSchema, index)
+                    )}
                 </div>
             );
         }
