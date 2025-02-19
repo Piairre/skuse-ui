@@ -85,7 +85,7 @@ export default function FormattedMarkdown({
 
     // Format the content based on languageCode if provided
     const formattedContent = languageCode
-        ? "```" + languageCode + "\n" + markdown + "```"
+        ? "```" + languageCode + "\n" + markdown + "\n```"
         : markdown;
 
     // Determine if content should be truncated
