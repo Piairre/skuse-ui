@@ -57,7 +57,7 @@ const renderSchemaType = (schema: SchemaObject): string => {
         return `${schema.type}[${itemSchema.title || itemSchema.type || ''}]`;
     }
 
-    return schema.type || 'unknown';
+    return schema.type || schema.refName || 'object';
 };
 
 const generateExample = (schema: SchemaObject | undefined): any => {
@@ -78,28 +78,16 @@ const generateExample = (schema: SchemaObject | undefined): any => {
         return generateExample(schema.oneOf[0]);
     }
 
-    if (schema.type === 'object' && schema.properties) {
-        const example = Object.fromEntries(
-            Object.entries(schema.properties).map(([key, prop]) => [
-                key,
-                generateExample(prop)
-            ])
-        );
-
-        if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-            example['additionalProp1'] = generateExample(schema.additionalProperties as SchemaObject);
-        }
-
-        return example;
+    if ((schema.type === 'object' || schema.properties) && schema.properties) {
+        return generateObjectExample(schema.properties);
     }
 
     if (schema.type === 'array') {
         if (!schema.items) return [];
 
-        const numItems = schema.minItems || 1;
-        return Array(numItems).fill(null).map(() =>
+        return [
             generateExample(schema.items as SchemaObject)
-        );
+        ];
     }
 
     if (Array.isArray(schema.type)) {
@@ -107,17 +95,29 @@ const generateExample = (schema: SchemaObject | undefined): any => {
         return generateExample({ ...schema, type: nonNullType || schema.type[0] });
     }
 
-    const defaultValues: Record<string, any> = {
+    return generateBasicTypeExample(schema);
+};
+
+const generateObjectExample = (properties: Record<string, SchemaObject>): Record<string, any> => {
+    return Object.fromEntries(
+        Object.entries(properties).map(([key, prop]) => [
+            key,
+            generateExample(prop)
+        ])
+    );
+};
+
+const generateBasicTypeExample = (schema: SchemaObject): any => {
+    const defaultValues: Record<string, () => any> = {
         string: () => {
-            if (schema.format === 'date-time') return new Date().toISOString();
-            if (schema.format === 'date') return new Date().toISOString().split('T')[0];
+            if (schema.format === 'date-time') return '2024-02-19T14:30:00Z';
+            if (schema.format === 'date') return '2024-02-19';
             if (schema.format === 'email') return 'user@example.com';
             if (schema.format === 'uri') return 'https://example.com';
             if (schema.format === 'uuid') return '123e4567-e89b-12d3-a456-426614174000';
             if (schema.enum?.length) return schema.enum[0];
             if (schema.pattern) return `pattern:${schema.pattern}`;
             if (schema.minLength) return 'a'.repeat(schema.minLength);
-            return 'string';
         },
         number: () => {
             if (schema.minimum !== undefined) return schema.minimum;
@@ -129,11 +129,12 @@ const generateExample = (schema: SchemaObject | undefined): any => {
             if (schema.maximum !== undefined) return Math.floor(schema.maximum);
             return 0;
         },
-        boolean: () => schema.default ?? true
+        boolean: () => schema.default ?? true,
+        object: () => ({})
     };
 
     const type = schema.type as keyof typeof defaultValues;
-    return type in defaultValues ? defaultValues[type]() : null;
+    return type in defaultValues ? defaultValues[type] : schema.ref || null;
 };
 
 const isReference = (obj: any): obj is Reference => {
@@ -182,6 +183,10 @@ const resolveReference = (ref: string, document: OpenAPIInputDocument): any => {
             throw new Error(`Invalid reference: ${ref}`);
         }
     }
+
+    // add the reference property to the resolved reference
+    current.ref = ref;
+    current.refName = parts[parts.length - 1];
 
     return current;
 };

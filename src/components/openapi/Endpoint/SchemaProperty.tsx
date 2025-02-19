@@ -1,11 +1,11 @@
 import React from 'react';
 import {Badge} from "@/components/ui/badge";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
-import {ChevronDown, ChevronRight} from 'lucide-react';
+import {ChevronRight} from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {isNullableSchema, renderSchemaType} from "@/utils/openapi";
-import ExternalDocsLink from "@/components/openapi/Endpoint/ExternalDocsLink";
 import {SchemaObject} from "@/types/unified-openapi-types";
+import ExternalDocsLink from "@/components/openapi/Endpoint/ExternalDocsLink";
 
 interface SchemaPropertyProps {
     name?: string;
@@ -22,12 +22,10 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                                                        }) => {
     const [isOpen, setIsOpen] = React.useState(isRoot);
 
-    const isArrayOfObjects = schema.type === 'array' &&
-        (schema.items as SchemaObject).type === 'object';
-
-    const hasChildren = (schema.type === 'object' && schema.properties) ||
-        (schema.type === 'array' && schema.items &&
-            (schema.items as SchemaObject).properties) ||
+    const isArrayType = schema.type === 'array';
+    const isObjectType = !schema.type && schema.properties;
+    const hasProperties = schema.properties || (isArrayType && schema.items && (schema.items as SchemaObject).properties);
+    const hasChildren = hasProperties || schema.items ||
         (schema.oneOf && schema.oneOf.length > 0) ||
         (schema.anyOf && schema.anyOf.length > 0);
 
@@ -83,23 +81,92 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         return details;
     };
 
-    const renderEnumBadges = () => {
-        if (!schema.enum) return null;
+    const renderPropertyContent = () => {
+        if (schema.oneOf) {
+            return (
+                <div className="pl-4">
+                    {schema.oneOf.map((subSchema: SchemaObject, index) => (
+                        <div key={index} className="mt-2">
+                            <Collapsible>
+                                <CollapsibleTrigger className="flex items-center gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded group">
+                                    <ChevronRight className="h-4 w-4 group-data-[state=open]:rotate-90 transition-transform" />
+                                    <div className="flex flex-col">
+                                        <div className="flex items-center gap-2">
+                                            <Badge variant="outline" className="text-xs">
+                                                Option {index + 1}
+                                            </Badge>
+                                            {subSchema.description && (
+                                                <span className="text-sm text-gray-600 dark:text-gray-400">
+                                                    {subSchema.description}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="ml-6 mt-2">
+                                    {subSchema.properties && (
+                                        <div className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
+                                            {Object.entries(subSchema.properties).map(([propName, propSchema]) => (
+                                                <SchemaProperty
+                                                    key={propName}
+                                                    name={propName}
+                                                    schema={propSchema}
+                                                    required={subSchema.required?.includes(propName)}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </CollapsibleContent>
+                            </Collapsible>
+                        </div>
+                    ))}
+                </div>
+            );
+        }
 
-        return (
-            <div className="flex flex-wrap items-center gap-1 mt-1">
-                <span className="text-xs text-gray-600 dark:text-gray-400">enum:</span>
-                {schema.enum.map((value) => (
-                    <Badge
-                        key={value}
-                        variant="outline"
-                        className="text-xs bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800"
-                    >
-                        {value}
-                    </Badge>
-                ))}
-            </div>
-        );
+        if (isObjectType || (schema.type === 'object' && schema.properties)) {
+            const properties = schema.properties || {};
+            return (
+                <div className="pl-4">
+                    {Object.entries(properties).map(([propName, propSchema]) => (
+                        <div key={propName} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
+                            <SchemaProperty
+                                name={propName}
+                                schema={propSchema}
+                                required={schema.required?.includes(propName)}
+                            />
+                        </div>
+                    ))}
+                </div>
+            );
+        }
+
+        if (isArrayType && schema.items) {
+            const itemSchema = schema.items as SchemaObject;
+            return (
+                <div className="pl-4">
+                    <div className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
+                        {itemSchema.type === 'object' || itemSchema.properties ? (
+                            Object.entries(itemSchema.properties || {}).map(([propName, propSchema]) => (
+                                <SchemaProperty
+                                    key={propName}
+                                    name={propName}
+                                    schema={propSchema}
+                                    required={itemSchema.required?.includes(propName)}
+                                />
+                            ))
+                        ) : (
+                            <SchemaProperty
+                                schema={itemSchema}
+                                isRoot={false}
+                            />
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        return null;
     };
 
     return (
@@ -107,117 +174,32 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                 <CollapsibleTrigger className="group flex items-start gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded">
                     {hasChildren && (
-                        <div className="text-gray-500 dark:text-gray-400 mt-1">
-                            {isOpen ?
-                                <ChevronDown className="h-4 w-4" /> :
-                                <ChevronRight className="h-4 w-4" />
-                            }
-                        </div>
+                        <ChevronRight className="h-4 w-4 mt-1 group-data-[state=open]:rotate-90 transition-transform" />
                     )}
                     <div className="flex flex-col gap-1 text-left">
                         <div className="flex items-center gap-2">
                             {name && (
                                 <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                                    {name}{schema.type === 'array' && '[]'}
+                                    {name}{isArrayType && '[]'}
                                 </span>
                             )}
                             <div className="flex flex-wrap gap-1 items-center">
                                 {renderPropertyDetails()}
                             </div>
                         </div>
-                        {(schema.description || schema.enum) && (
-                            <div className="space-y-0">
-                                {schema.description && (
-                                    <FormattedMarkdown
-                                        className="!text-xs !text-gray-600 dark:!text-gray-400"
-                                        markdown={schema.description}
-                                    />
-                                )}
-                                {renderEnumBadges()}
-                            </div>
+                        {schema.description && (
+                            <FormattedMarkdown
+                                className="!text-xs !text-gray-600 dark:!text-gray-400"
+                                markdown={schema.description}
+                            />
                         )}
                     </div>
                 </CollapsibleTrigger>
-
-                <CollapsibleContent className="ml-6">
-                    {schema.anyOf ? (
-                        <div className="space-y-0 mt-2">
-                            {schema.anyOf.map((subSchema: SchemaObject, index) => {
-                                if (isNullableSchema(subSchema)) {
-                                    return (
-                                        <div key={index} className="py-1">
-                                            <Badge variant="outline" className="text-xs border-slate-200 dark:border-slate-700">
-                                                null
-                                            </Badge>
-                                        </div>
-                                    );
-                                }
-
-                                return (
-                                    <div className={"border-l-2 border-slate-200 dark:border-slate-700 pl-4"}>
-                                        <SchemaProperty
-                                            key={index}
-                                            schema={subSchema}
-                                            isRoot={false}
-                                        />
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : schema.oneOf ? (
-                        <div className="space-y-0 mt-2">
-                            {schema.oneOf.map((subSchema, index) => (
-                                <SchemaProperty
-                                    key={index}
-                                    schema={subSchema}
-                                    isRoot={false}
-                                />
-                            ))}
-                        </div>
-                    ) : isArrayOfObjects ? (
-                        <div className="space-y-0 mt-2">
-                            {Object.entries(schema.items?.properties || {})
-                                .map(([propName, propSchema]) => (
-                                    <div key={propName} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                                        <SchemaProperty
-                                            key={propName}
-                                            name={propName}
-                                            schema={propSchema}
-                                            required={schema.items?.required?.includes(propName)}
-                                            isRoot={false}
-                                        />
-                                    </div>
-                                ))}
-                        </div>
-                    ) : (
-                        <>
-                            {schema.type === 'object' && schema.properties && (
-                                <div className="space-y-0 mt-2">
-                                    {Object.entries(schema.properties).map(([propName, propSchema]) => (
-                                        <div key={propName} className={isRoot ? '' : 'border-l-2 border-slate-200 dark:border-slate-700 pl-4'}>
-                                            <SchemaProperty
-                                                key={propName}
-                                                name={propName}
-                                                schema={propSchema}
-                                                required={schema.required?.includes(propName)}
-                                                isRoot={false}
-                                            />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {schema.type === 'array' && schema.items &&
-                                schema.items.properties && (
-                                    <div className="mt-2 border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                                        <SchemaProperty
-                                            schema={schema.items}
-                                            isRoot={false}
-                                        />
-                                    </div>
-                                )}
-                        </>
-                    )}
-                </CollapsibleContent>
+                {hasChildren && (
+                    <CollapsibleContent className="mt-2">
+                        {renderPropertyContent()}
+                    </CollapsibleContent>
+                )}
             </Collapsible>
         </div>
     );

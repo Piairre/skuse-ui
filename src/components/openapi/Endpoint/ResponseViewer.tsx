@@ -2,9 +2,8 @@ import React from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
-import SchemaProperty from './SchemaProperty';
-import {generateExample} from "@/utils/openapi";
 import {ResponseObject, SchemaObject} from "@/types/unified-openapi-types";
+import SchemaViewer from './SchemaViewer';
 
 interface ResponseViewerProps {
     responses: {[code: string]: ResponseObject}
@@ -57,34 +56,6 @@ const StatusTab: React.FC<{
         >
             {code}
         </TabsTrigger>
-    );
-};
-
-const SchemaViewer: React.FC<{
-    schema: SchemaObject;
-    contentType: string;
-    description?: string;
-}> = ({ schema }) => {
-    return (
-        <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-2">
-                <h3 className="text-base font-medium dark:text-gray-100">Response Schema</h3>
-                <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 space-y-1">
-                    <SchemaProperty schema={schema} isRoot={true} />
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <h3 className="text-base font-medium dark:text-gray-100">Example Response</h3>
-                <div>
-                    <FormattedMarkdown
-                        markdown={JSON.stringify(schema?.example || generateExample(schema), null, 2)}
-                        languageCode={'json'}
-                        className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
-                    />
-                </div>
-            </div>
-        </div>
     );
 };
 

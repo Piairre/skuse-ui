@@ -143,6 +143,8 @@ export interface ParameterObject {
 
 export interface SchemaObject {
     type?: string | string[];
+    ref?: string;
+    refName?: string;
     items?: SchemaObject;
     properties?: {
         [key: string]: SchemaObject;
