@@ -19,6 +19,10 @@ const Sidebar: React.FC = () => {
 
     const tags = Object.entries(groupedEndpointsByTag);
 
+    if (tags?.length === 1 && tags[0]?.[0] && !openTag) {
+        setOpenTag(tags[0][0]);
+    }
+
     return (
         <div className="w-80 shadow-lg flex flex-col h-full">
             <div className="flex-grow py-2 overflow-y-auto">
