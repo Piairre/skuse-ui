@@ -2,8 +2,11 @@ import React from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
-import {ResponseObject, SchemaObject} from "@/types/unified-openapi-types";
+import {ResponseObject, SchemaObject, HeaderObject} from "@/types/unified-openapi-types";
 import SchemaViewer from './SchemaViewer';
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Badge} from "@/components/ui/badge";
+import {renderSchemaType} from "@/utils/openapi";
 
 interface ResponseViewerProps {
     responses: {[code: string]: ResponseObject}
@@ -36,6 +39,57 @@ const STATUS_STYLES = {
         active: 'data-[state=active]:bg-red-500 bg-red-500 dark:text-white'
     }
 } as const;
+
+interface HeaderViewerProps {
+    headers: {[name: string]: HeaderObject};
+}
+
+const HeaderViewer: React.FC<HeaderViewerProps> = ({ headers }) => {
+    if (!headers || Object.keys(headers).length === 0) return null;
+
+    return (
+        <Card className="mt-4">
+            <CardHeader>
+                <CardTitle className="text-base">Headers</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {Object.entries(headers).map(([name, header]) => (
+                        <div key={name} className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">{name}</span>
+                                {header.required && (
+                                    <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+                                        required
+                                    </Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                    {(header.schema && renderSchemaType(header.schema)) || 'unknown'}
+                                </Badge>
+                                {header.schema?.pattern && (
+                                    <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                                        pattern
+                                    </Badge>
+                                )}
+                            </div>
+                            {header.description && (
+                                <FormattedMarkdown
+                                    markdown={header.description}
+                                    className="!text-xs text-gray-600 dark:text-gray-400"
+                                />
+                            )}
+                            {header.schema?.pattern && (
+                                <div className="text-xs font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded">
+                                    Pattern: {header.schema.pattern}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
 
 const StatusTab: React.FC<{
     code: string;
@@ -136,6 +190,10 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                     </div>
                                 )}
 
+                                {response.headers && (
+                                    <HeaderViewer headers={response.headers} />
+                                )}
+
                                 {contentTypes.length === 0 ? null : (
                                     <>
                                         {contentTypes.length > 1 && activeContentType ? (
@@ -164,8 +222,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                                         <TabsContent key={contentType} value={contentType}>
                                                             <ContentTypeTab
                                                                 contentType={contentType}
-                                                                schema={content.schema
-                                                            }
+                                                                schema={content.schema}
                                                                 description={response.description}
                                                             />
                                                         </TabsContent>

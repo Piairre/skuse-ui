@@ -57,7 +57,7 @@ const renderSchemaType = (schema: SchemaObject): string => {
         return `${schema.type}[${itemSchema.title || itemSchema.type || ''}]`;
     }
 
-    return schema.type || schema.refName || 'object';
+    return schema.type || schema.refName || 'unknown';
 };
 
 const generateExample = (schema: SchemaObject | undefined): any => {
