@@ -20,19 +20,12 @@ const indexRoute = new Route({
     component: Information
 });
 
-// Endpoint routes
 const endpointRoute = new Route({
     getParentRoute: () => rootRoute,
     path: '/$tag/$operationId',
     component: EndpointDetails
 });
 
-const endpointRouteUntagged = new Route({
-    getParentRoute: () => rootRoute,
-    path: '/$operationId',
-    component: EndpointDetails
-});
-
-const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, endpointRouteUntagged]);
+const routeTree = rootRoute.addChildren([indexRoute, endpointRoute]);
 
 export const router = new Router({ routeTree });
