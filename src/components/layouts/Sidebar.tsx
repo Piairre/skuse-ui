@@ -14,7 +14,7 @@ const Sidebar: React.FC = () => {
     const [openTag, setOpenTag] = useState<string | null>(null);
 
     const {spec} = useOpenAPIContext();
-    const groupedEndpointsByTag = groupEndpointsByTags(spec?.paths);
+    const groupedEndpointsByTag = groupEndpointsByTags(spec.paths);
     const { theme, setTheme } = useTheme();
 
     const tags = Object.entries(groupedEndpointsByTag);

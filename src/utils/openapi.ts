@@ -287,8 +287,9 @@ function groupEndpointsByTags(paths: PathsObject): TaggedOperationsMap {
             Object.entries(pathItem).forEach(([method, operation]) => {
                 if (isValidHttpMethod(method)) {
                     const typedOperation = operation as OperationObject;
-                    const tag = typedOperation.tags?.[0] || 'default';
-                    pushToTag(tag, typedOperation, path, method);
+
+                    const tags = typedOperation.tags || ['default'];
+                    tags.map(tag => pushToTag(tag, typedOperation, path, method));
                 }
             });
         }
