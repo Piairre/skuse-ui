@@ -62,12 +62,23 @@ const renderSchemaType = (schema: SchemaObject): string => {
 
 const generateExample = (schema: SchemaObject | undefined): any => {
     if (!schema) return null;
+
     if (schema.example !== undefined) return schema.example;
 
+    if (schema.type === 'array') {
+        if (!schema.items) return [];
+
+        return [
+            generateExample(schema.items as SchemaObject)
+        ];
+    }
+
+    if (schema.ref && schema.refName && schema.properties) {
+        return generateObjectExample(schema.properties);
+    }
+
     if (schema.anyOf) {
-        const nonNullSchema = schema.anyOf.find(subSchema => {
-            return !isNullableSchema(subSchema);
-        });
+        const nonNullSchema = schema.anyOf.find(subSchema => !isNullableSchema(subSchema));
         if (nonNullSchema) {
             return generateExample(nonNullSchema);
         }
@@ -78,16 +89,8 @@ const generateExample = (schema: SchemaObject | undefined): any => {
         return generateExample(schema.oneOf[0]);
     }
 
-    if ((schema.type === 'object' || schema.properties) && schema.properties) {
-        return generateObjectExample(schema.properties);
-    }
-
-    if (schema.type === 'array') {
-        if (!schema.items) return [];
-
-        return [
-            generateExample(schema.items as SchemaObject)
-        ];
+    if (schema.type === 'object' || schema.properties) {
+        return generateObjectExample(schema.properties || {});
     }
 
     if (Array.isArray(schema.type)) {
@@ -110,12 +113,12 @@ const generateObjectExample = (properties: Record<string, SchemaObject>): Record
 const generateBasicTypeExample = (schema: SchemaObject): any => {
     const defaultValues: Record<string, () => any> = {
         string: () => {
+            if (schema.enum?.length) return schema.enum[0];
             if (schema.format === 'date-time') return '2024-02-19T14:30:00Z';
             if (schema.format === 'date') return '2024-02-19';
             if (schema.format === 'email') return 'user@example.com';
             if (schema.format === 'uri') return 'https://example.com';
             if (schema.format === 'uuid') return '123e4567-e89b-12d3-a456-426614174000';
-            if (schema.enum?.length) return schema.enum[0];
             if (schema.pattern) return `pattern:${schema.pattern}`;
             if (schema.minLength) return 'a'.repeat(schema.minLength);
         },
@@ -134,7 +137,7 @@ const generateBasicTypeExample = (schema: SchemaObject): any => {
     };
 
     const type = schema.type as keyof typeof defaultValues;
-    return type in defaultValues ? defaultValues[type] : schema.ref || null;
+    return defaultValues[type]?.() ?? schema.ref ?? null;
 };
 
 const isReference = (obj: any): obj is Reference => {
