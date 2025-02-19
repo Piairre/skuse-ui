@@ -111,6 +111,8 @@ const generateObjectExample = (properties: Record<string, SchemaObject>): Record
 };
 
 const generateBasicTypeExample = (schema: SchemaObject): any => {
+    if (schema.default !== undefined) return schema.default;
+
     const defaultValues: Record<string, () => any> = {
         string: () => {
             if (schema.enum?.length) return schema.enum[0];
@@ -121,6 +123,7 @@ const generateBasicTypeExample = (schema: SchemaObject): any => {
             if (schema.format === 'uuid') return '123e4567-e89b-12d3-a456-426614174000';
             if (schema.pattern) return `pattern:${schema.pattern}`;
             if (schema.minLength) return 'a'.repeat(schema.minLength);
+            return 'string';
         },
         number: () => {
             if (schema.minimum !== undefined) return schema.minimum;
