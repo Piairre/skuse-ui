@@ -2,7 +2,7 @@ import React from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
-import {ResponseObject, SchemaObject, HeaderObject} from "@/types/unified-openapi-types";
+import {ResponseObject, SchemaObject, HeaderObject, ExampleObject} from "@/types/unified-openapi-types";
 import SchemaViewer from './SchemaViewer';
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
@@ -117,15 +117,22 @@ interface ContentTypeTabProps {
     contentType: string;
     schema: SchemaObject;
     description?: string;
+    examples?: { [key: string]: ExampleObject };
 }
 
-const ContentTypeTab: React.FC<ContentTypeTabProps> = ({ contentType, schema, description }) => {
+const ContentTypeTab: React.FC<ContentTypeTabProps> = ({
+                                                           contentType,
+                                                           schema,
+                                                           description,
+                                                           examples
+                                                       }) => {
     return (
         <div className="space-y-4">
             <SchemaViewer
                 schema={schema}
                 contentType={contentType}
                 description={description}
+                examples={examples}
             />
         </div>
     );
@@ -224,6 +231,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                                                 contentType={contentType}
                                                                 schema={content.schema}
                                                                 description={response.description}
+                                                                examples={content.examples}
                                                             />
                                                         </TabsContent>
                                                     );
@@ -234,6 +242,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                                 contentType={contentTypes[0]}
                                                 schema={response.content?.[contentTypes[0]]?.schema as SchemaObject}
                                                 description={response.description}
+                                                examples={response.content?.[contentTypes[0]]?.examples}
                                             />
                                         ) : null}
                                     </>

@@ -83,6 +83,11 @@ export default function FormattedMarkdown({
     const [isLoading, setIsLoading] = useState(false);
     useHashLinkFix();
 
+    if (languageCode === 'json') {
+        // reformating json to be more readable
+        markdown = JSON.stringify(JSON.parse(markdown), null, 2);
+    }
+
     // Format the content based on languageCode if provided
     const formattedContent = languageCode
         ? "```" + languageCode + "\n" + markdown + "\n```"
