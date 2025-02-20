@@ -302,15 +302,14 @@ function groupEndpointsByTags(paths: PathsObject): TaggedOperationsMap {
 }
 
 function findOperationByOperationIdAndTag(
+    paths: PathsObject,
     operationId: string,
-    tag?: string
+    tag: string
 ): EnhancedOperationObject | null {
-    const { spec } = useOpenAPIContext();
+    if (!paths) return null;
 
-    if (!spec?.paths) return null;
-
-    const groupedEndpoints = groupEndpointsByTags(spec.paths);
-    const tagEndpoints = groupedEndpoints[tag || 'default'];
+    const groupedEndpoints = groupEndpointsByTags(paths);
+    const tagEndpoints = groupedEndpoints[tag];
 
     if (!tagEndpoints) return null;
     return tagEndpoints.find(endpoint => getOperationId(endpoint) === operationId) || null;
