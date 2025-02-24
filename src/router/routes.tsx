@@ -10,7 +10,7 @@ import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 const rootRoute = new RootRoute({
     component: () => (
         // See examples to test doc : https://apis.guru/
-        <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/bunq.com/1.0/openapi.json"} />
+        <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/amazonaws.com/AWSMigrationHub/2017-05-31/openapi.json"} />
     )
 });
 

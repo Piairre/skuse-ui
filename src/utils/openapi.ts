@@ -190,11 +190,27 @@ const resolveReference = (ref: string, document: OpenAPIInputDocument): any => {
         }
     }
 
-    // add the reference property to the resolved reference
-    current.ref = ref;
-    current.refName = parts[parts.length - 1];
+    const resolved = typeof current === 'object' ? { ...current } : {};
 
-    return current;
+    resolved.ref = ref;
+    resolved.refName = parts[parts.length - 1];
+
+    if (!resolved.type) {
+        if (resolved.properties && Object.keys(resolved.properties).length > 0) {
+            resolved.type = 'object';
+        }
+        else if (resolved.items) {
+            resolved.type = 'array';
+        }
+        else {
+            resolved.type = 'object';
+            if (!resolved.properties) {
+                resolved.properties = {};
+            }
+        }
+    }
+
+    return resolved;
 };
 
 const resolveAllOf = (schema: any, document: OpenAPIInputDocument, visited: Set<string>): any => {
