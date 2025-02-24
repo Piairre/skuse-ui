@@ -9,7 +9,7 @@ import {Badge} from "@/components/ui/badge";
 import {renderSchemaType} from "@/utils/openapi";
 
 interface ResponseViewerProps {
-    responses: {[code: string]: ResponseObject}
+    responses: { [code: string]: ResponseObject }
 }
 
 const STATUS_STYLES = {
@@ -41,10 +41,10 @@ const STATUS_STYLES = {
 } as const;
 
 interface HeaderViewerProps {
-    headers: {[name: string]: HeaderObject};
+    headers: { [name: string]: HeaderObject };
 }
 
-const HeaderViewer: React.FC<HeaderViewerProps> = ({ headers }) => {
+const HeaderViewer: React.FC<HeaderViewerProps> = ({headers}) => {
     if (!headers || Object.keys(headers).length === 0) return null;
 
     return (
@@ -59,15 +59,17 @@ const HeaderViewer: React.FC<HeaderViewerProps> = ({ headers }) => {
                             <div className="flex items-center gap-2">
                                 <span className="font-mono text-sm">{name}</span>
                                 {header.required && (
-                                    <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+                                    <Badge variant="outline"
+                                           className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
                                         required
                                     </Badge>
                                 )}
                                 <Badge variant="outline" className="text-xs">
-                                    {(header.schema && renderSchemaType(header.schema)) || 'unknown'}
+                                    { (header.type || header.schema) ? (header.schema ? renderSchemaType(header.schema) : 'unknown') : '' }
                                 </Badge>
                                 {header.schema?.pattern && (
-                                    <Badge variant="outline" className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                                    <Badge variant="outline"
+                                           className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
                                         pattern
                                     </Badge>
                                 )}
@@ -94,7 +96,7 @@ const HeaderViewer: React.FC<HeaderViewerProps> = ({ headers }) => {
 const StatusTab: React.FC<{
     code: string;
     isActive: boolean;
-}> = ({ code, isActive }) => {
+}> = ({code, isActive}) => {
     const statusType = code.charAt(0) as keyof typeof STATUS_STYLES;
     const styles = STATUS_STYLES[statusType] ?? STATUS_STYLES['5'];
 
@@ -138,7 +140,7 @@ const ContentTypeTab: React.FC<ContentTypeTabProps> = ({
     );
 };
 
-const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
+const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
     if (!responses) return null;
 
     const responseKeys = Object.keys(responses);
@@ -193,12 +195,12 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                             <div className="space-y-4">
                                 {response.description && (
                                     <div className="prose dark:prose-invert max-w-none">
-                                        <FormattedMarkdown markdown={response.description} />
+                                        <FormattedMarkdown markdown={response.description}/>
                                     </div>
                                 )}
 
                                 {response.headers && (
-                                    <HeaderViewer headers={response.headers} />
+                                    <HeaderViewer headers={response.headers}/>
                                 )}
 
                                 {contentTypes.length === 0 ? null : (

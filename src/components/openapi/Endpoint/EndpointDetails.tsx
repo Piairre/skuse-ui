@@ -66,9 +66,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                     </span>
                 )}
 
-                {operation.description && (
-                    <FormattedMarkdown markdown={operation.description} maxLength={1000} />
-                )}
+                <FormattedMarkdown markdown={operation.description || '_No description provided_'} maxLength={1000} />
             </div>
 
             {operation.deprecated && (

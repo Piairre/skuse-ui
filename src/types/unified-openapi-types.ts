@@ -235,6 +235,7 @@ export interface MediaTypeObject {
 
 export interface HeaderObject {
     description?: string;
+    type?: string;
     required?: boolean;
     deprecated?: boolean;
     allowEmptyValue?: boolean;
