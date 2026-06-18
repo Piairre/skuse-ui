@@ -4,7 +4,7 @@ import Sidebar from "@/components/layouts/Sidebar";
 import { Outlet, useLocation } from "@tanstack/react-router";
 import MinimifiedInfo from "@/components/layouts/MinimifiedInfo";
 import LayoutSkeleton from '@/components/Skeletons/LayoutSkeleton';
-import { Menu } from 'lucide-react';
+import { Menu, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -13,7 +13,7 @@ interface SkuseDocumentationProps {
 }
 
 export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiUrl }) => {
-    const { spec, error, loading } = useSpec({ openApiUrl });
+    const { spec, error, loading, retry } = useSpec({ openApiUrl });
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -23,7 +23,19 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
     }, [location.pathname]);
 
     if (loading) return <LayoutSkeleton />;
-    if (error) return <div>Erreur : {error.message}</div>;
+    if (error) return (
+        <div className="h-screen flex flex-col items-center justify-center gap-6 px-4 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground" />
+            <div className="space-y-1">
+                <h2 className="text-lg font-semibold">Impossible de charger la documentation</h2>
+                <p className="text-sm text-muted-foreground max-w-md">{error.message}</p>
+            </div>
+            <Button variant="outline" onClick={retry} className="gap-2">
+                <RefreshCw className="h-4 w-4" />
+                Réessayer
+            </Button>
+        </div>
+    );
     if (!spec) return null;
 
     const showMinimifiedInfo = location.pathname !== '/';
