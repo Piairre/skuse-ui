@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { Braces } from 'lucide-react';
 import { convert, getLanguageList } from 'postman-code-generators';
 import * as postman from 'postman-collection';
-import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { Command, CommandInput, CommandList, CommandItem } from "@/components/ui/command";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
-import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
+import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface CodeExamplesProps {
     method: string;
@@ -47,12 +50,14 @@ const DEFAULT_REQUEST_OPTIONS: PostmanRequestOptions = {
     followRedirect: true,
 };
 
+const getSelectKey = (lang: FlattenedLanguage) =>
+    lang.variant ? `${lang.language.key}:${lang.variant}` : lang.language.key;
+
 const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }) => {
     const { computedUrl } = useOpenAPIContext();
     const [languages, setLanguages] = useState<FlattenedLanguage[]>([]);
     const [selectedLanguage, setSelectedLanguage] = useState<FlattenedLanguage | null>(null);
     const [snippet, setSnippet] = useState<string>('');
-    const [open, setOpen] = useState<boolean>(false);
 
     useEffect(() => {
         const langs: Language[] = getLanguageList();
@@ -62,7 +67,6 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }
                 : [{ language: lang }]
         );
         setLanguages(flattenedLanguages);
-
         if (flattenedLanguages.length > 0) {
             setSelectedLanguage(flattenedLanguages[0] as FlattenedLanguage);
         }
@@ -79,9 +83,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }
                     body: {
                         mode: 'raw' as const,
                         raw: requestBody,
-                        options: {
-                            raw: { language: 'json' as const }
-                        }
+                        options: { raw: { language: 'json' as const } }
                     }
                 })
             });
@@ -108,45 +110,38 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }
         }
     }, [method, path, requestBody, selectedLanguage, computedUrl]);
 
-    const handleLanguageSelect = (language: Language, variant?: string) => {
-        setSelectedLanguage({ language, variant });
-        setOpen(false);
+    const handleSelectChange = (value: string) => {
+        const found = languages.find(l => getSelectKey(l) === value);
+        if (found) setSelectedLanguage(found);
     };
 
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
-                <h3 className="text-lg font-medium mb-2">Code Examples</h3>
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
-                        <Button variant="outline" className="flex items-center gap-2">
-                            <Braces className="w-4 h-4" />
-                            {selectedLanguage?.language.label}
-                            {selectedLanguage?.variant ? ` (${selectedLanguage.variant})` : ""}
-                        </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-72 p-2">
-                        <Command>
-                            <CommandInput placeholder="Search language..." />
-                            <CommandList>
-                                {languages.map(({ language, variant }) => (
-                                    <CommandItem
-                                        key={variant ? `${language.key}:${variant}` : language.key}
-                                        onSelect={() => handleLanguageSelect(language, variant)}
-                                    >
-                                        {language.label} {variant ? `(${variant})` : ""}
-                                    </CommandItem>
-                                ))}
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
+                <h3 className="text-lg font-medium">Code Examples</h3>
+                <Select
+                    value={selectedLanguage ? getSelectKey(selectedLanguage) : undefined}
+                    onValueChange={handleSelectChange}
+                >
+                    <SelectTrigger className="w-48">
+                        <SelectValue placeholder="Select language" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {languages.map((lang) => (
+                            <SelectItem key={getSelectKey(lang)} value={getSelectKey(lang)}>
+                                {lang.language.label}{lang.variant ? ` (${lang.variant})` : ''}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
-            <FormattedMarkdown
-                markdown={snippet}
-                languageCode={selectedLanguage?.language.syntax_mode ?? ''}
-                className="[&_code]:!whitespace-pre-wrap"
-            />
+            <div className="max-h-[60vh] overflow-y-auto rounded-lg">
+                <FormattedMarkdown
+                    markdown={snippet}
+                    languageCode={selectedLanguage?.language.syntax_mode ?? ''}
+                    className="[&_code]:!whitespace-pre-wrap"
+                />
+            </div>
         </div>
     );
 };

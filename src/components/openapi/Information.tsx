@@ -1,12 +1,7 @@
 import React from 'react';
 import {Card, CardHeader, CardTitle, CardContent} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
-import {
-    ExternalLink,
-    Scale,
-    Mail,
-    Earth
-} from 'lucide-react';
+import {ExternalLink, Scale, Mail, Earth} from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import Servers from "@/components/openapi/Servers";
 import {useOpenAPIContext} from "@/hooks/OpenAPIContext";
@@ -16,92 +11,75 @@ const Information: React.FC = () => {
     const {spec} = useOpenAPIContext();
 
     return (
-        <Card className="w-full mx-auto">
-            <CardHeader>
-                <div className="flex justify-between items-center">
-                    <div className="flex">
-                        <Badge variant="outline"
-                               className="border-black dark:border-white hover:bg-black dark:hover:bg-white hover:text-white dark:hover:text-black flex justify-center items-center px-3 py-1 me-2">
-                            API: {spec.info.version}
-                        </Badge>
-                        <Badge variant="outline"
-                               className="border-green-500 text-green-500 hover:bg-green-500 hover:text-white flex justify-center items-center px-3 py-1 me-2">
-                            OAS: {spec?.openapi || spec?.swagger}
-                        </Badge>
-                    </div>
-
+        <Card className="w-full">
+            <CardHeader className="pb-4">
+                <div className="flex items-start justify-between gap-6">
                     <div>
-                        <div className="flex justify-end">
-                            {spec.info.contact?.email && (
-                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                    <a href={`mailto:${spec.info.contact.email}`}
-                                       className="flex items-center hover:underline">
-                                        <Mail className="w-4 h-4 me-2 text-primary"/>
-                                        {spec.info.contact.email}
-                                    </a>
-                                </Badge>
-                            )}
-
-                            {spec.info.contact?.url && (
-                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                    <a href={spec.info.contact.url} target="_blank" rel="noopener noreferrer"
-                                       className="flex items-center hover:underline">
-                                        <Earth className="w-4 h-4 me-2 text-primary"/>
-                                        {spec.info.contact.url}
-                                    </a>
-                                </Badge>
-                            )}
-
-                            {spec?.externalDocs && (
-                                <Badge variant="secondary" className="flex justify-center items-center px-3 py-1 me-2">
-                                    <a href={spec.externalDocs.url} target="_blank" rel="noopener noreferrer"
-                                       className="flex items-center hover:underline">
-                                        <ExternalLink className="w-4 h-4 me-2 text-primary"/>
-                                        {spec.externalDocs.description || 'Documentation'}
-                                    </a>
-                                </Badge>
-                            )}
+                        <CardTitle className="text-2xl font-bold">{spec.info.title}</CardTitle>
+                        <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <Badge variant="outline" className="font-mono">
+                                v{spec.info.version}
+                            </Badge>
+                            <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400">
+                                {spec.openapi || spec.swagger}
+                            </Badge>
                         </div>
+                    </div>
 
-                        <div className="flex justify-end">
-                            {spec.info.license && (
-                                <Badge variant="secondary"
-                                       className="flex justify-center items-center px-3 py-1 me-2 mt-1">
-                                    <a href={spec.info.license.url} target="_blank" rel="noopener noreferrer"
-                                       className="flex items-center hover:underline">
-                                        <Scale className="w-4 h-4 me-2 text-primary"/>
-                                        {spec.info.license.name}
-                                    </a>
-                                </Badge>
-                            )}
-
-                            {spec.info.termsOfService && (
-                                <Badge variant="secondary"
-                                       className="flex justify-center items-center px-3 py-1 me-2 mt-1">
-                                    <a href={spec.info.termsOfService} target="_blank" rel="noopener noreferrer"
-                                       className="flex items-center hover:underline">
-                                        <ExternalLink className="w-4 h-4 me-2 text-primary"/>
-                                        Terms of Service
-                                    </a>
-                                </Badge>
-                            )}
-                        </div>
-
+                    <div className="flex flex-wrap justify-end items-center gap-x-4 gap-y-2 text-sm text-muted-foreground shrink-0">
+                        {spec.info.contact?.email && (
+                            <a href={`mailto:${spec.info.contact.email}`}
+                               className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                                <Mail className="h-4 w-4" />
+                                {spec.info.contact.email}
+                            </a>
+                        )}
+                        {spec.info.contact?.url && (
+                            <a href={spec.info.contact.url} target="_blank" rel="noopener noreferrer"
+                               className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                                <Earth className="h-4 w-4" />
+                                Website
+                            </a>
+                        )}
+                        {spec.externalDocs && (
+                            <a href={spec.externalDocs.url} target="_blank" rel="noopener noreferrer"
+                               className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                                <ExternalLink className="h-4 w-4" />
+                                {spec.externalDocs.description || 'Docs'}
+                            </a>
+                        )}
+                        {spec.info.license && (
+                            spec.info.license.url ? (
+                                <a href={spec.info.license.url} target="_blank" rel="noopener noreferrer"
+                                   className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                                    <Scale className="h-4 w-4" />
+                                    {spec.info.license.name}
+                                </a>
+                            ) : (
+                                <span className="flex items-center gap-1.5">
+                                    <Scale className="h-4 w-4" />
+                                    {spec.info.license.name}
+                                </span>
+                            )
+                        )}
+                        {spec.info.termsOfService && (
+                            <a href={spec.info.termsOfService} target="_blank" rel="noopener noreferrer"
+                               className="flex items-center gap-1.5 hover:text-foreground transition-colors">
+                                <ExternalLink className="h-4 w-4" />
+                                Terms
+                            </a>
+                        )}
                     </div>
                 </div>
-
-                <CardTitle className="text-2xl font-bold">
-                    {spec.info.title}
-                </CardTitle>
             </CardHeader>
-            <CardContent>
-                <div className="grid lg:grid-cols-2 gap-2 mb-2">
-                    <Servers servers={spec.servers ?? []}/>
-                    <AuthCard securitySchemes={spec.components?.securitySchemes}/>
-                </div>
 
+            <CardContent>
+                <div className="grid lg:grid-cols-2 gap-4 mb-4">
+                    <Servers servers={spec.servers ?? []} />
+                    <AuthCard securitySchemes={spec.components?.securitySchemes} />
+                </div>
                 {spec.info.description && (
-                    <FormattedMarkdown className={"p-6"} style={{wordBreak: 'break-word'}} markdown={spec.info.description} maxLength={5000}/>
+                    <FormattedMarkdown className="p-6 break-words" markdown={spec.info.description} maxLength={5000} />
                 )}
             </CardContent>
         </Card>

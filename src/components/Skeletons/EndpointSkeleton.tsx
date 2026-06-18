@@ -20,9 +20,9 @@ const EndpointSkeleton = () => {
                 <div className="container grid grid-cols-5 gap-6 p-4">
                     <div className="col-span-3">
                         <Tabs defaultValue="info" className="w-full">
-                            <TabsList>
+                            <TabsList className="w-full">
                                 {['Info', 'Parameters', 'Request Body', 'Responses'].map((tab) => (
-                                    <TabsTrigger key={tab} value={tab.toLowerCase()} disabled>
+                                    <TabsTrigger key={tab} value={tab.toLowerCase()} disabled className="flex-1">
                                         <div className="flex items-center gap-2">
                                             <Skeleton className="h-4 w-4" />
                                             <Skeleton className="h-4 w-16" />

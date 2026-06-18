@@ -1,131 +1,187 @@
 import React from 'react';
-import {Badge} from "@/components/ui/badge";
-import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
-import {ChevronRight} from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Badge } from "@/components/ui/badge";
+import { ChevronRight } from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
-import {isNullableSchema, renderSchemaType} from "@/utils/openapi";
-import {SchemaObject} from "@/types/unified-openapi-types";
-import ExternalDocsLink from "@/components/openapi/Endpoint/ExternalDocsLink";
+import { renderSchemaType, flattenSchema } from "@/utils/openapi";
+import { SchemaObject } from "@/types/unified-openapi-types";
+import SchemaBadges from "@/components/openapi/Endpoint/SchemaBadges";
+import { SchemaExpandContext } from "@/components/openapi/Endpoint/SchemaExpandContext";
 
 interface SchemaPropertyProps {
     name?: string;
     schema: SchemaObject;
     required?: boolean;
     isRoot?: boolean;
+    depth?: number;
 }
 
+const DEPTH_STYLES = [
+    {
+        border: 'border-l-slate-300 dark:border-l-slate-600',
+        openBg: 'bg-slate-50 dark:bg-slate-800/50',
+        separator: 'border-b-slate-200 dark:border-b-slate-700',
+    },
+    {
+        border: 'border-l-blue-300 dark:border-l-blue-700',
+        openBg: 'bg-blue-50/50 dark:bg-blue-950/25',
+        separator: 'border-b-blue-200 dark:border-b-blue-800',
+    },
+    {
+        border: 'border-l-violet-300 dark:border-l-violet-700',
+        openBg: 'bg-violet-50/50 dark:bg-violet-950/25',
+        separator: 'border-b-violet-200 dark:border-b-violet-800',
+    },
+    {
+        border: 'border-l-emerald-300 dark:border-l-emerald-700',
+        openBg: 'bg-emerald-50/50 dark:bg-emerald-950/25',
+        separator: 'border-b-emerald-200 dark:border-b-emerald-800',
+    },
+    {
+        border: 'border-l-amber-300 dark:border-l-amber-700',
+        openBg: 'bg-amber-50/50 dark:bg-amber-950/25',
+        separator: 'border-b-amber-200 dark:border-b-amber-800',
+    },
+] as const;
+
+const getDepthStyle = (depth: number) => DEPTH_STYLES[depth % DEPTH_STYLES.length]!;
+
+const isExpandable = (schema: SchemaObject): boolean =>
+    !!schema.properties ||
+    schema.type === 'object' ||
+    (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) ||
+    (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) ||
+    (Array.isArray(schema.allOf) && schema.allOf.length > 0);
+
+const mergeAllOf = (schemas: SchemaObject[]): { properties: Record<string, SchemaObject>; required: string[] } => {
+    const properties: Record<string, SchemaObject> = {};
+    const required: string[] = [];
+    for (const s of schemas) {
+        if (s.properties) Object.assign(properties, s.properties);
+        if (s.required) required.push(...s.required);
+    }
+    return { properties, required: required.filter((v, i, a) => a.indexOf(v) === i) };
+};
+
 const SchemaProperty: React.FC<SchemaPropertyProps> = ({
-                                                           name,
-                                                           schema,
-                                                           required,
-                                                           isRoot = false
-                                                       }) => {
-    const [isOpen, setIsOpen] = React.useState(isRoot);
+    name,
+    schema,
+    required,
+    isRoot = false,
+    depth = 0,
+}) => {
+    const s = flattenSchema(schema);
+    const depthStyle = getDepthStyle(depth);
 
-    const isArrayType = schema.type === 'array';
-    const isObjectType = !schema.type && schema.properties;
-    const hasProperties = schema.properties || (isArrayType && schema.items && (schema.items as SchemaObject).properties);
-    const hasChildren = hasProperties || schema.items ||
-        (schema.oneOf && schema.oneOf.length > 0) ||
-        (schema.anyOf && schema.anyOf.length > 0);
+    const isArrayType = s.type === 'array' || (!s.type && !!s.items);
+    const isObjectType = !!(s.properties || s.additionalProperties);
 
-    const renderPropertyDetails = (): JSX.Element[] => {
-        const details: JSX.Element[] = [];
+    const hasChildren =
+        isObjectType ||
+        (isArrayType && !!s.items && isExpandable(s.items)) ||
+        (Array.isArray(s.oneOf) && s.oneOf.length > 0) ||
+        (Array.isArray(s.anyOf) && s.anyOf.length > 0) ||
+        (Array.isArray(s.allOf) && s.allOf.length > 0 && s.allOf.some(sub => !!sub.properties));
 
-        details.push(
-            <Badge key="type" variant="outline" className="text-xs border-slate-200 dark:border-slate-700">
-                {renderSchemaType(schema)}
-            </Badge>
-        );
+    const [isOpen, setIsOpen] = React.useState(isRoot && hasChildren);
 
-        if (required) {
-            details.push(
-                <Badge key="required" variant="outline"
-                       className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
-                    required
-                </Badge>
-            );
+    const expandCtx = React.useContext(SchemaExpandContext);
+    const expandVersion = expandCtx?.version ?? 0;
+    const allOpen = expandCtx?.allOpen ?? false;
+    React.useEffect(() => {
+        if (expandVersion === 0 || !hasChildren) return;
+        setIsOpen(allOpen);
+    }, [expandVersion, allOpen, hasChildren]);
+
+    // Child count for the closed-state badge
+    const childCount = React.useMemo((): { count: number; label: string } | null => {
+        if (!hasChildren) return null;
+        if (isObjectType) {
+            const count = Object.keys(s.properties || {}).length;
+            return count > 0 ? { count, label: count === 1 ? 'property' : 'properties' } : null;
         }
-
-        if (schema.format) {
-            details.push(
-                <Badge key="format" variant="outline"
-                       className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
-                    {schema.format}
-                </Badge>
-            );
+        if (isArrayType && s.items?.properties) {
+            const count = Object.keys(s.items.properties).length;
+            return count > 0 ? { count, label: count === 1 ? 'field' : 'fields' } : null;
         }
-
-        if (schema.deprecated) {
-            details.push(
-                <Badge key="deprecated" variant="outline"
-                       className="text-xs bg-yellow-50 dark:bg-yellow-900/30 border-yellow-200 dark:border-yellow-800">
-                    deprecated
-                </Badge>
-            );
+        if (Array.isArray(s.oneOf) && s.oneOf.length > 0) return { count: s.oneOf.length, label: 'variants' };
+        if (Array.isArray(s.anyOf) && s.anyOf.length > 0) return { count: s.anyOf.length, label: 'variants' };
+        if (Array.isArray(s.allOf) && s.allOf.length > 0) {
+            const { properties } = mergeAllOf(s.allOf);
+            const count = Object.keys(properties).length;
+            return count > 0 ? { count, label: count === 1 ? 'property' : 'properties' } : null;
         }
+        return null;
+    }, [hasChildren, isObjectType, isArrayType, s]);
 
-        if (schema.readOnly) {
-            details.push(
-                <Badge key="readonly" variant="outline"
-                       className="text-xs bg-gray-50 dark:bg-gray-900/30 border-gray-200 dark:border-gray-800">
-                    readonly
-                </Badge>
-            );
-        }
+    const childWrapper = (key: string, child: React.ReactNode) => (
+        <div key={key} className={depth > 0 ? cn('border-l-2 pl-4', depthStyle.border) : undefined}>
+            {child}
+        </div>
+    );
 
-        if (schema.externalDocs?.url) {
-            details.push(<ExternalDocsLink key="external-docs" url={schema.externalDocs.url} />);
-        }
+    const renderCompositeOption = (option: SchemaObject, index: number, label: string) => {
+        const itemSchema = option.type === 'array' && option.items ? option.items : option;
+        const canExpand = !!itemSchema.properties && Object.keys(itemSchema.properties).length > 0;
+        const nextDepth = depth + 1;
+        const nextStyle = getDepthStyle(nextDepth);
 
-        return details;
-    };
-
-    const renderOneOfOption = (option: SchemaObject, index: number) => {
-        const itemSchema = option.type === 'array' ? option.items as SchemaObject : option;
-        const canCollapse = ['object', 'array'].includes(itemSchema.type as string);
-
-        const content = (
-            <div className="flex items-center gap-2">
-                <Badge variant="outline" className="text-xs">
-                    Option {index + 1}
-                </Badge>
+        const header = (
+            <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant="outline" className="text-xs">{label} {index + 1}</Badge>
                 <Badge variant="outline" className="text-xs border-slate-200 dark:border-slate-700">
                     {renderSchemaType(option)}
                 </Badge>
                 {option.description && (
-                    <span className="text-sm text-gray-600 dark:text-gray-400">
-                        {option.description}
-                    </span>
+                    <span className="text-xs text-gray-600 dark:text-gray-400">{option.description}</span>
                 )}
             </div>
         );
 
-        if (!canCollapse) {
+        if (!canExpand) {
             return (
-                <div key={index} className="mt-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-800 rounded">
-                    {content}
+                <div key={index} className="flex flex-col gap-1.5 p-2 rounded text-sm">
+                    <div className="flex items-center gap-2">
+                        <div className="w-4 shrink-0" />
+                        {header}
+                    </div>
+                    {itemSchema.enum && itemSchema.enum.length > 0 && (
+                        <div className="flex flex-wrap items-center gap-1 pl-6">
+                            <span className="text-xs text-muted-foreground">enum:</span>
+                            {itemSchema.enum.map((value, i) => (
+                                <Badge key={i} variant="outline" className="text-xs font-mono bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                                    {JSON.stringify(value)}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
                 </div>
             );
         }
 
         return (
-            <div key={index} className="mt-2">
+            <div key={index}>
                 <Collapsible>
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded group">
-                        <ChevronRight className="h-4 w-4 group-data-[state=open]:rotate-90 transition-transform" />
-                        <div className="flex flex-col">
-                            {content}
-                        </div>
+                    <CollapsibleTrigger className={cn(
+                        "group flex items-center gap-2 w-full p-2 cursor-pointer transition-colors",
+                        "data-[state=open]:rounded-t data-[state=closed]:rounded",
+                        "data-[state=open]:" + nextStyle.openBg,
+                        "data-[state=open]:border-b data-[state=open]:" + nextStyle.separator,
+                        "hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
+                        {header}
                     </CollapsibleTrigger>
-                    <CollapsibleContent className="ml-6 mt-2">
-                        <div className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                            {Object.entries(itemSchema.properties || {}).map(([propName, propSchema]) => (
+                    <CollapsibleContent className="mt-1 pl-4">
+                        <div className={cn('border-l-2 pl-4', nextStyle.border)}>
+                            {Object.entries(itemSchema.properties ?? {}).map(([propName, propSchema]) => (
                                 <SchemaProperty
                                     key={propName}
                                     name={propName}
                                     schema={propSchema}
                                     required={itemSchema.required?.includes(propName)}
+                                    depth={nextDepth}
                                 />
                             ))}
                         </div>
@@ -135,94 +191,139 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         );
     };
 
-    const renderPropertyContent = () => {
-        if (schema.oneOf) {
-            return (
-                <div className="pl-4">
-                    {schema.oneOf.map((subSchema: SchemaObject, index) =>
-                        renderOneOfOption(subSchema, index)
-                    )}
-                </div>
-            );
-        }
+    const renderCompositeGroup = (key: string, title: string, schemas: SchemaObject[], label: string) => (
+        <div key={key} className="pl-4 mt-1">
+            <p className="text-xs text-muted-foreground px-2 pb-1">{title}</p>
+            {schemas.map((sub, i) => renderCompositeOption(sub, i, label))}
+        </div>
+    );
 
-        if (isObjectType || (schema.type === 'object' && schema.properties)) {
-            const properties = schema.properties || {};
-            return (
-                <div className="pl-4">
-                    {Object.entries(properties).map(([propName, propSchema]) => (
-                        <div key={propName} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
+    const renderChildren = () => {
+        const parts: React.ReactNode[] = [];
+        const nextDepth = depth + 1;
+
+        if (isObjectType) {
+            parts.push(
+                <div key="props" className={depth === 0 ? 'pl-2' : 'pl-4'}>
+                    {Object.entries(s.properties || {}).map(([propName, propSchema]) =>
+                        childWrapper(propName,
                             <SchemaProperty
                                 name={propName}
                                 schema={propSchema}
-                                required={schema.required?.includes(propName)}
+                                required={s.required?.includes(propName)}
+                                depth={nextDepth}
                             />
-                        </div>
-                    ))}
+                        )
+                    )}
                 </div>
             );
-        }
-
-        if (isArrayType && schema.items) {
-            const itemSchema = schema.items as SchemaObject;
-            return (
-                <div className="pl-4">
-                    <div className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                        {itemSchema.type === 'object' || itemSchema.properties ? (
-                            Object.entries(itemSchema.properties || {}).map(([propName, propSchema]) => (
+        } else if (isArrayType && s.items) {
+            const itemSchema = s.items;
+            parts.push(
+                <div key="items" className={depth === 0 ? 'pl-2' : 'pl-4'}>
+                    {itemSchema.properties ? (
+                        Object.entries(itemSchema.properties).map(([propName, propSchema]) =>
+                            childWrapper(propName,
                                 <SchemaProperty
-                                    key={propName}
                                     name={propName}
                                     schema={propSchema}
                                     required={itemSchema.required?.includes(propName)}
+                                    depth={nextDepth}
                                 />
-                            ))
-                        ) : (
-                            <SchemaProperty
-                                schema={itemSchema}
-                                isRoot={false}
-                            />
-                        )}
-                    </div>
+                            )
+                        )
+                    ) : (
+                        <SchemaProperty schema={itemSchema} depth={nextDepth} />
+                    )}
                 </div>
             );
         }
 
-        return null;
-    };
-
-    return (
-        <div className="py-1">
-            <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <CollapsibleTrigger className="group flex items-start gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded">
-                    {hasChildren && (
-                        <ChevronRight className="h-4 w-4 mt-1 group-data-[state=open]:rotate-90 transition-transform" />
-                    )}
-                    <div className="flex flex-col gap-1 text-left">
-                        <div className="flex items-center gap-2">
-                            {name && (
-                                <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                                    {name}{isArrayType && '[]'}
-                                </span>
-                            )}
-                            <div className="flex flex-wrap gap-1 items-center">
-                                {renderPropertyDetails()}
-                            </div>
-                        </div>
-                        {schema.description && (
-                            <FormattedMarkdown
-                                className="!text-xs !text-gray-600 dark:!text-gray-400"
-                                markdown={schema.description}
-                            />
+        if (Array.isArray(s.oneOf) && s.oneOf.length > 0)
+            parts.push(renderCompositeGroup('oneOf', 'One of:', s.oneOf, 'Option'));
+        if (Array.isArray(s.anyOf) && s.anyOf.length > 0)
+            parts.push(renderCompositeGroup('anyOf', 'Any of:', s.anyOf, 'Option'));
+        if (Array.isArray(s.allOf) && s.allOf.length > 0) {
+            const { properties, required: allOfRequired } = mergeAllOf(s.allOf);
+            if (Object.keys(properties).length > 0) {
+                parts.push(
+                    <div key="allOf" className="pl-4">
+                        {Object.entries(properties).map(([propName, propSchema]) =>
+                            childWrapper(propName,
+                                <SchemaProperty
+                                    name={propName}
+                                    schema={propSchema}
+                                    required={allOfRequired.includes(propName)}
+                                    depth={nextDepth}
+                                />
+                            )
                         )}
                     </div>
-                </CollapsibleTrigger>
-                {hasChildren && (
-                    <CollapsibleContent className="mt-2">
-                        {renderPropertyContent()}
-                    </CollapsibleContent>
+                );
+            }
+        }
+
+        return parts.length > 0 ? <div className="space-y-0.5 py-1">{parts}</div> : null;
+    };
+
+    const headerContent = (
+        <div className="flex flex-col gap-1 text-left min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+                {name && (
+                    <span className="font-mono text-sm font-medium text-gray-900 dark:text-gray-100">
+                        {name}{isArrayType && '[]'}
+                        {required && <span className="text-red-500 ml-0.5">*</span>}
+                    </span>
                 )}
-            </Collapsible>
+                <SchemaBadges schema={s} />
+            </div>
+            {s.description && (
+                <FormattedMarkdown
+                    className="!text-xs !text-gray-600 dark:!text-gray-400"
+                    markdown={s.description}
+                />
+            )}
+            {s.enum && s.enum.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1 mt-0.5">
+                    <span className="text-xs text-muted-foreground">enum:</span>
+                    {s.enum.map((value, i) => (
+                        <Badge key={i} variant="outline" className="text-xs font-mono bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                            {JSON.stringify(value)}
+                        </Badge>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+
+    return (
+        <div className="py-0.5">
+            {hasChildren ? (
+                <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+                    <CollapsibleTrigger className={cn(
+                        "group flex items-start gap-2 w-full p-2 cursor-pointer transition-colors",
+                        isOpen
+                            ? cn("rounded-t", depthStyle.openBg, "border-b", depthStyle.separator)
+                            : "rounded hover:bg-slate-50 dark:hover:bg-slate-800"
+                    )}>
+                        <ChevronRight className="h-4 w-4 mt-1 shrink-0 text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
+                        {headerContent}
+                        {!isOpen && childCount && (
+                            <span className="shrink-0 self-center text-xs text-muted-foreground">
+                                {childCount.count} {childCount.label}
+                            </span>
+                        )}
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                        {renderChildren()}
+                    </CollapsibleContent>
+                </Collapsible>
+            ) : (
+                <div className="flex items-start gap-2 p-2">
+                    <div className="w-4 shrink-0" />
+                    {headerContent}
+                </div>
+            )}
         </div>
     );
 };

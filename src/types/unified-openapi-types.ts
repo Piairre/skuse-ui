@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {OpenAPIV2, OpenAPIV3, OpenAPIV3_1} from 'openapi-types';
 
 export type OpenAPIInputDocument = OpenAPIV2.Document | OpenAPIV3.Document | OpenAPIV3_1.Document | {
