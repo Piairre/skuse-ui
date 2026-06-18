@@ -54,7 +54,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({children, securitySchemes}) => {
                         const AuthMethodComponent = getAuthMethodComponent(scheme);
                         return (
                             <TabsContent className="max-h-80 overflow-y-auto" key={name} value={name}>
-                                <AuthMethodComponent scheme={scheme}/>
+                                <AuthMethodComponent scheme={scheme} schemeName={name} />
                             </TabsContent>
                         );
                     })}

@@ -378,6 +378,13 @@ export type SecuritySchemeObject =
     openIdConnectUrl: string;
 };
 
+export type AuthCredential =
+    | { type: 'bearer'; token: string }
+    | { type: 'basic'; username: string; password: string }
+    | { type: 'apiKey'; key: string; in: 'header' | 'query' | 'cookie'; name: string }
+    | { type: 'oauth2'; accessToken: string; tokenType: string; scope?: string }
+    | { type: 'openIdConnect'; accessToken: string };
+
 export interface EnhancedOperationObject extends OperationObject {
     path: string;
     method: HttpMethod;

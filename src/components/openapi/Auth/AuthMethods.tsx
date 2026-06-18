@@ -1,257 +1,284 @@
-import React, {useState} from 'react';
-import {Button} from "@/components/ui/button";
-import {Input} from "@/components/ui/input";
+import React, { useState } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-    Key,
-    Lock,
-    KeyRound,
-    UserCheck,
-    ShieldCheck,
-    ChevronsUpDown,
-    Check
+    Key, Lock, KeyRound, UserCheck, ShieldCheck, CheckCircle2, X
 } from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
-import {Popover, PopoverContent, PopoverTrigger} from "@/components/ui/popover";
-import {Command, CommandEmpty, CommandGroup, CommandItem, CommandList} from "@/components/ui/command";
-import {cn} from "@/lib/utils";
-import {AuthorizeButton} from "@/components/openapi/Auth/AuthButton";
-import {SecuritySchemeObject} from "@/types/unified-openapi-types";
+import { AuthorizeButton } from "@/components/openapi/Auth/AuthButton";
+import { SecuritySchemeObject, AuthCredential } from "@/types/unified-openapi-types";
+import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 
-type HttpScheme = Extract<SecuritySchemeObject, { type: 'http' | 'basic' }>;
-type ApiKeyScheme = Extract<SecuritySchemeObject, { type: 'apiKey' }>;
-type OAuth2Scheme = Extract<SecuritySchemeObject, { type: 'oauth2' }>;
-type OpenIdScheme = Extract<SecuritySchemeObject, { type: 'openIdConnect' }>;
+type AuthComponent = React.FC<{ scheme: SecuritySchemeObject; schemeName: string }>;
 
-type AuthComponent = React.FC<{ scheme: SecuritySchemeObject }>;
 const UnsupportedAuthMethod: AuthComponent = () => (
-    <div>Unsupported authentication method</div>
+    <p className="text-sm text-muted-foreground">Unsupported authentication method.</p>
 );
 
-export const BasicAuthMethod: React.FC<{
-    scheme: HttpScheme
-}> = ({scheme}) => {
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
+const AuthenticatedBadge: React.FC<{ onClear: () => void }> = ({ onClear }) => (
+    <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+        <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+        <span className="text-sm text-green-700 dark:text-green-400 flex-1">Authenticated</span>
+        <Button variant="ghost" size="sm" className="h-6 px-2 text-xs" onClick={onClear}>
+            <X className="h-3 w-3 mr-1" />
+            Clear
+        </Button>
+    </div>
+);
+
+// --- Basic Auth ---
+
+type HttpScheme = Extract<SecuritySchemeObject, { type: 'http' | 'basic' }>;
+
+export const BasicAuthMethod: AuthComponent = ({ scheme, schemeName }) => {
+    const { credentials, setCredential, clearCredential } = useOpenAPIContext();
+    const saved = credentials[schemeName] as Extract<AuthCredential, { type: 'basic' }> | undefined;
+
+    const [username, setUsername] = useState(saved?.username ?? '');
+    const [password, setPassword] = useState(saved?.password ?? '');
+
+    const authorize = () => {
+        if (!username.trim()) return;
+        setCredential(schemeName, { type: 'basic', username: username.trim(), password });
+    };
+
+    const clear = () => {
+        clearCredential(schemeName);
+        setUsername('');
+        setPassword('');
+    };
 
     return (
         <div className="space-y-4">
-            {scheme.description && (
+            {(scheme as HttpScheme).description && (
                 <div className="text-sm text-muted-foreground">
-                    <FormattedMarkdown markdown={scheme.description}/>
+                    <FormattedMarkdown markdown={(scheme as HttpScheme).description!} />
                 </div>
             )}
+            {saved && <AuthenticatedBadge onClear={clear} />}
             <div className="space-y-2">
                 <Input
                     type="text"
                     value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    placeholder="Enter username"
+                    onChange={e => setUsername(e.target.value)}
+                    placeholder="Username"
                 />
-            </div>
-            <div className="space-y-2">
                 <Input
                     type="password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Enter password"
+                    onChange={e => setPassword(e.target.value)}
+                    placeholder="Password"
                 />
             </div>
-            <AuthorizeButton onClick={() => console.log('TODO: Authenticate user')}/>
+            <AuthorizeButton onClick={authorize} />
         </div>
     );
 };
 
-export const BearerTokenMethod: React.FC<{
-    scheme: HttpScheme
-}> = ({scheme}) => {
-    const [token, setToken] = useState('');
+// --- Bearer Token ---
+
+export const BearerTokenMethod: AuthComponent = ({ scheme, schemeName }) => {
+    const { credentials, setCredential, clearCredential } = useOpenAPIContext();
+    const saved = credentials[schemeName] as Extract<AuthCredential, { type: 'bearer' }> | undefined;
+
+    const [token, setToken] = useState(saved?.token ?? '');
+
+    const authorize = () => {
+        if (!token.trim()) return;
+        setCredential(schemeName, { type: 'bearer', token: token.trim() });
+    };
+
+    const clear = () => {
+        clearCredential(schemeName);
+        setToken('');
+    };
+
+    const httpScheme = scheme as HttpScheme;
 
     return (
         <div className="space-y-4">
-            {scheme.description && (
+            {httpScheme.description && (
                 <div className="text-sm text-muted-foreground">
-                    <FormattedMarkdown markdown={scheme.description}/>
+                    <FormattedMarkdown markdown={httpScheme.description} />
                 </div>
             )}
-            {scheme.bearerFormat && (
-                <p className="text-xs text-muted-foreground">
-                    Expected format: {scheme.bearerFormat}
-                </p>
+            {httpScheme.bearerFormat && (
+                <p className="text-xs text-muted-foreground">Expected format: {httpScheme.bearerFormat}</p>
             )}
-            <div className="space-y-2">
-                <Input
-                    type="text"
-                    value={token}
-                    onChange={(e) => setToken(e.target.value)}
-                    placeholder="Enter bearer token"
-                />
-            </div>
-            <AuthorizeButton onClick={() => console.log('TODO: Save Bearer Token')}/>
+            {saved && <AuthenticatedBadge onClear={clear} />}
+            <Input
+                type="password"
+                value={token}
+                onChange={e => setToken(e.target.value)}
+                placeholder="Bearer token"
+            />
+            <AuthorizeButton onClick={authorize} />
         </div>
     );
 };
 
-export const ApiKeyMethod: React.FC<{
-    scheme: ApiKeyScheme
-}> = ({scheme}) => {
-    const [apiKey, setApiKey] = useState('');
+// --- API Key ---
+
+type ApiKeyScheme = Extract<SecuritySchemeObject, { type: 'apiKey' }>;
+
+export const ApiKeyMethod: AuthComponent = ({ scheme, schemeName }) => {
+    const { credentials, setCredential, clearCredential } = useOpenAPIContext();
+    const saved = credentials[schemeName] as Extract<AuthCredential, { type: 'apiKey' }> | undefined;
+    const apiKeyScheme = scheme as ApiKeyScheme;
+
+    const [apiKey, setApiKey] = useState(saved?.key ?? '');
+
+    const authorize = () => {
+        if (!apiKey.trim()) return;
+        setCredential(schemeName, {
+            type: 'apiKey',
+            key: apiKey.trim(),
+            in: apiKeyScheme.in as 'header' | 'query' | 'cookie',
+            name: apiKeyScheme.name,
+        });
+    };
+
+    const clear = () => {
+        clearCredential(schemeName);
+        setApiKey('');
+    };
 
     return (
         <div className="space-y-4">
-            {scheme.description && (
+            {apiKeyScheme.description && (
                 <div className="text-sm text-muted-foreground">
-                    <FormattedMarkdown markdown={scheme.description}/>
+                    <FormattedMarkdown markdown={apiKeyScheme.description} />
                 </div>
             )}
-            <div className="space-y-2">
-                <Input
-                    type="text"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder={`${scheme.name} - ${scheme.in}`}
-                />
-            </div>
-            <AuthorizeButton onClick={() => console.log('TODO: Save API Token')}/>
+            <p className="text-xs text-muted-foreground">
+                Sent as <code className="font-mono bg-muted px-1 rounded">{apiKeyScheme.name}</code> in{' '}
+                <span className="font-medium">{apiKeyScheme.in}</span>
+            </p>
+            {saved && <AuthenticatedBadge onClear={clear} />}
+            <Input
+                type="password"
+                value={apiKey}
+                onChange={e => setApiKey(e.target.value)}
+                placeholder={apiKeyScheme.name}
+            />
+            <AuthorizeButton onClick={authorize} />
         </div>
     );
 };
 
-export const OAuth2Method: React.FC<{
-    scheme: OAuth2Scheme
-}> = ({scheme}) => {
+// --- OAuth2 ---
+
+type OAuth2Scheme = Extract<SecuritySchemeObject, { type: 'oauth2' }>;
+
+export const OAuth2Method: AuthComponent = ({ scheme, schemeName }) => {
+    const { credentials } = useOpenAPIContext();
+    const saved = credentials[schemeName] as Extract<AuthCredential, { type: 'oauth2' }> | undefined;
+    const oauth2Scheme = scheme as OAuth2Scheme;
+
     type FlowType = keyof OAuth2Scheme['flows'];
-    const availableFlows = Object.keys(scheme.flows) as Array<FlowType>;
+    const availableFlows = Object.keys(oauth2Scheme.flows) as FlowType[];
+    const [selectedFlow, setSelectedFlow] = useState<FlowType>(availableFlows[0]!);
 
-    const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(
-        availableFlows[0] ?? null
-    );
-    const [open, setOpen] = useState(false);
+    const flow = oauth2Scheme.flows[selectedFlow];
 
     return (
         <div className="space-y-4">
-            {scheme.description && (
+            {oauth2Scheme.description && (
                 <div className="text-sm text-muted-foreground">
-                    <FormattedMarkdown markdown={scheme.description}/>
+                    <FormattedMarkdown markdown={oauth2Scheme.description} />
+                </div>
+            )}
+            {saved && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800">
+                    <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400 shrink-0" />
+                    <span className="text-sm text-green-700 dark:text-green-400 flex-1">
+                        Authenticated — {saved.tokenType} token
+                        {saved.scope && <span className="text-xs ml-1">({saved.scope})</span>}
+                    </span>
                 </div>
             )}
 
-            <div className="space-y-2">
-                <Popover open={open} onOpenChange={setOpen}>
-                    <PopoverTrigger asChild>
+            {availableFlows.length > 1 && (
+                <div className="flex gap-2 flex-wrap">
+                    {availableFlows.map(f => (
                         <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={open}
-                            className="w-full justify-between"
+                            key={f}
+                            variant={selectedFlow === f ? 'default' : 'outline'}
+                            size="sm"
+                            onClick={() => setSelectedFlow(f)}
                         >
-                            {selectedFlow
-                                ? availableFlows.find((flow) => flow === selectedFlow)
-                                : "Choose Authentication Flow"}
-                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50"/>
+                            {f}
                         </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="p-0 w-[--radix-popover-trigger-width] max-h-[--radix-popover-content-available-height]">
-                        <Command>
-                            <CommandList>
-                                <CommandEmpty>No flow found.</CommandEmpty>
-                                <CommandGroup>
-                                    {availableFlows.map((flow) => (
-                                        <CommandItem
-                                            key={flow}
-                                            value={flow}
-                                            onSelect={(currentValue) => {
-                                                const flowValue = currentValue as FlowType;
-                                                setSelectedFlow(flowValue === selectedFlow ? null : flowValue);
-                                                setOpen(false);
-                                            }}
-                                        >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    selectedFlow === flow ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            {flow}
-                                        </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                            </CommandList>
-                        </Command>
-                    </PopoverContent>
-                </Popover>
-            </div>
-
-            {selectedFlow && (
-                <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">
-                        {scheme.flows[selectedFlow] && (
-                            <>
-                                {selectedFlow === 'implicit' && (
-                                    <p>Authorization URL: {scheme.flows.implicit?.authorizationUrl}</p>
-                                )}
-                                {selectedFlow === 'authorizationCode' && (
-                                    <>
-                                        <p>Authorization URL: {scheme.flows.authorizationCode?.authorizationUrl}</p>
-                                        <p>Token URL: {scheme.flows.authorizationCode?.tokenUrl}</p>
-                                    </>
-                                )}
-                                {(selectedFlow === 'password' || selectedFlow === 'clientCredentials') && (
-                                    <p>Token URL: {scheme.flows[selectedFlow]?.tokenUrl}</p>
-                                )}
-
-                                {Object.keys(scheme.flows[selectedFlow]?.scopes || {}).length > 0 && (
-                                    <div>
-                                        <p>Available Scopes:</p>
-                                        <ul className="list-disc list-inside text-xs">
-                                            {Object.entries(scheme.flows[selectedFlow]?.scopes || {}).map(([scope, description]) => (
-                                                <li key={scope}>{scope}: {description}</li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                )}
-                            </>
-                        )}
-                    </div>
-                    <AuthorizeButton onClick={() => console.log('TODO: Go to OAuth Page')}/>
+                    ))}
                 </div>
             )}
+
+            {flow && (
+                <div className="space-y-2 text-sm text-muted-foreground bg-muted/50 rounded-lg p-3">
+                    {'authorizationUrl' in flow && (
+                        <p><span className="font-medium text-foreground">Authorization URL:</span>{' '}
+                            <code className="font-mono text-xs break-all">{flow.authorizationUrl}</code>
+                        </p>
+                    )}
+                    {'tokenUrl' in flow && flow.tokenUrl && (
+                        <p><span className="font-medium text-foreground">Token URL:</span>{' '}
+                            <code className="font-mono text-xs break-all">{flow.tokenUrl}</code>
+                        </p>
+                    )}
+                    {Object.keys(flow.scopes ?? {}).length > 0 && (
+                        <div>
+                            <p className="font-medium text-foreground mb-1">Scopes:</p>
+                            <ul className="space-y-0.5">
+                                {Object.entries(flow.scopes ?? {}).map(([scope, desc]) => (
+                                    <li key={scope} className="text-xs">
+                                        <code className="font-mono bg-muted px-1 rounded">{scope}</code>
+                                        {desc && <span className="ml-1 text-muted-foreground">{desc}</span>}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <p className="text-xs text-muted-foreground italic">
+                OAuth2 flows — coming soon.
+            </p>
         </div>
     );
 };
 
-export const OpenIDMethod: React.FC<{
-    scheme: OpenIdScheme
-}> = ({scheme}) => {
+// --- OpenID Connect ---
+
+type OpenIdScheme = Extract<SecuritySchemeObject, { type: 'openIdConnect' }>;
+
+export const OpenIDMethod: AuthComponent = ({ scheme }) => {
+    const openIdScheme = scheme as OpenIdScheme;
+
     return (
         <div className="space-y-4">
-            {scheme.description && (
+            {openIdScheme.description && (
                 <div className="text-sm text-muted-foreground">
-                    <FormattedMarkdown markdown={scheme.description}/>
+                    <FormattedMarkdown markdown={openIdScheme.description} />
                 </div>
             )}
-            <div className="space-y-2">
-                <span className="text-sm text-muted-foreground">OpenID Connect URL</span>
-                <Input
-                    value={scheme.openIdConnectUrl}
-                    readOnly
-                    className="cursor-not-allowed"
-                />
+            <div className="space-y-1">
+                <p className="text-xs text-muted-foreground">OpenID Connect URL</p>
+                <Input value={openIdScheme.openIdConnectUrl} readOnly className="font-mono text-xs" />
             </div>
-            <AuthorizeButton onClick={() => console.log('TODO: Go to Open ID URL')}/>
+            <p className="text-xs text-muted-foreground italic">OpenID Connect — coming soon.</p>
         </div>
     );
 };
 
-export const getAuthMethodComponent = (
-    scheme: SecuritySchemeObject
-): AuthComponent => {
+// --- Factory ---
+
+export const getAuthMethodComponent = (scheme: SecuritySchemeObject): AuthComponent => {
     switch (scheme.type) {
         case 'http':
         case 'basic':
-            if (scheme.scheme === 'basic')
-                return BasicAuthMethod;
-            if (scheme.scheme === 'bearer')
-                return BearerTokenMethod;
+            if (scheme.scheme === 'basic') return BasicAuthMethod;
+            if (scheme.scheme === 'bearer') return BearerTokenMethod;
             return UnsupportedAuthMethod;
         case 'apiKey':
             return ApiKeyMethod;
@@ -268,14 +295,14 @@ export const getSchemeIcon = (type: SecuritySchemeObject['type']) => {
     switch (type) {
         case 'http':
         case 'basic':
-            return <UserCheck className="w-5 h-5 mr-2"/>;
+            return <UserCheck className="w-4 h-4 mr-1.5" />;
         case 'apiKey':
-            return <Key className="w-5 h-5 mr-2"/>;
+            return <Key className="w-4 h-4 mr-1.5" />;
         case 'oauth2':
-            return <Lock className="w-5 h-5 mr-2"/>;
+            return <Lock className="w-4 h-4 mr-1.5" />;
         case 'openIdConnect':
-            return <ShieldCheck className="w-5 h-5 mr-2"/>;
+            return <ShieldCheck className="w-4 h-4 mr-1.5" />;
         default:
-            return <KeyRound className="w-5 h-5 mr-2"/>;
+            return <KeyRound className="w-4 h-4 mr-1.5" />;
     }
 };
