@@ -7,6 +7,7 @@ import LayoutSkeleton from '@/components/Skeletons/LayoutSkeleton';
 import { Menu, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useOAuthCallback } from '@/hooks/useOAuthCallback';
 
 interface SkuseDocumentationProps {
     openApiUrl: string;
@@ -16,6 +17,7 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
     const { spec, error, loading, retry } = useSpec({ openApiUrl });
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    useOAuthCallback();
 
     // Close sidebar on navigation (mobile)
     useEffect(() => {
