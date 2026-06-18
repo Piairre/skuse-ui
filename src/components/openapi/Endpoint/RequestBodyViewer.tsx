@@ -4,6 +4,8 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import SchemaProperty from './SchemaProperty';
 import { generateExample } from '@/utils/openapi';
+import { ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
+import { SchemaExpandContext } from "@/components/openapi/Endpoint/SchemaExpandContext";
 import {
     MediaTypeObject,
     RequestBodyObject,
@@ -30,7 +32,7 @@ const ContentTypeTab: React.FC<{
     return (
         <TabsTrigger
             value={contentType}
-            className={`text-sm ${isActive ? 'font-medium' : ''}`}
+            className={`flex-1 text-sm ${isActive ? 'font-medium' : ''}`}
         >
             {contentType}
         </TabsTrigger>
@@ -69,6 +71,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
         ? Object.keys(requestBody.content[firstContentType].examples)[0] || ''
         : '';
     const [selectedExample, setSelectedExample] = React.useState<string>(firstExample);
+    const [expandState, setExpandState] = React.useState<{ version: number; allOpen: boolean }>({ version: 0, allOpen: false });
 
     React.useEffect(() => {
         if (!contentTypes.includes(activeContentType)) {
@@ -123,17 +126,37 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                         <TabsContent key={contentType} value={contentType} className="mt-4">
                             <div className="space-y-6">
                                 <div className="space-y-2">
-                                    <h3 className="text-base font-medium dark:text-gray-100">Request Schema</h3>
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="text-base font-medium text-foreground">Request Schema</h3>
+                                        <div className="flex items-center gap-1">
+                                            <button
+                                                onClick={() => setExpandState(s => ({ version: s.version + 1, allOpen: true }))}
+                                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            >
+                                                <ChevronsUpDown className="h-3.5 w-3.5" />
+                                                Expand all
+                                            </button>
+                                            <button
+                                                onClick={() => setExpandState(s => ({ version: s.version + 1, allOpen: false }))}
+                                                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                            >
+                                                <ChevronsDownUp className="h-3.5 w-3.5" />
+                                                Collapse all
+                                            </button>
+                                        </div>
+                                    </div>
                                     <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 space-y-1">
-                                        <SchemaProperty
-                                            schema={content.schema}
-                                            isRoot={true}
-                                        />
+                                        <SchemaExpandContext.Provider value={expandState}>
+                                            <SchemaProperty
+                                                schema={content.schema}
+                                                isRoot={true}
+                                            />
+                                        </SchemaExpandContext.Provider>
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <h3 className="text-base font-medium dark:text-gray-100">Example Request</h3>
+                                    <h3 className="text-base font-medium text-foreground">Example Request</h3>
                                     {content.examples && Object.keys(content.examples).length > 0 && (
                                         <ExamplesSelector
                                             examples={content.examples}
@@ -152,7 +175,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
 
                                 {content.encoding && (
                                     <div className="space-y-2">
-                                        <h3 className="text-base font-medium dark:text-gray-100">Encoding Information</h3>
+                                        <h3 className="text-base font-medium text-foreground">Encoding Information</h3>
                                         <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700">
                                             {Object.entries(content.encoding).map(([key, encoding]) => (
                                                 <div key={key} className="space-y-1">

@@ -2,10 +2,10 @@ import React from 'react';
 import {Badge} from "@/components/ui/badge";
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
-import {ChevronDown, ChevronRight} from 'lucide-react';
+import {ChevronRight} from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
-import { renderSchemaType } from '@/utils/openapi';
 import {ParameterObject, SchemaObject} from "@/types/unified-openapi-types";
+import SchemaBadges from "@/components/openapi/Endpoint/SchemaBadges";
 
 type ParameterLocation = 'query' | 'path' | 'header' | 'cookie';
 
@@ -21,7 +21,7 @@ const LocationTab: React.FC<{
     return (
         <TabsTrigger
             value={location}
-            className="flex items-center gap-1.5 py-2"
+            className="flex-1 flex items-center gap-1.5 py-2"
         >
             <div className="relative ps-0.5">
                 <span className="capitalize">{location}</span>
@@ -40,23 +40,30 @@ const NestedProperties: React.FC<{
     schema: SchemaObject;
     parameterLocation: ParameterLocation;
 }> = ({ schema, parameterLocation }) => {
+    const renderCompositeSchemas = (schemas: SchemaObject[], label: string, namePrefix: string) => (
+        <div className="space-y-1 mt-2">
+            <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">{label}</div>
+            {schemas.map((subSchema, index) => (
+                <div key={index} className="border-l-2 border-slate-300 dark:border-slate-600 pl-4">
+                    <ParameterProperty
+                        parameter={{ name: `${namePrefix}${index + 1}`, in: parameterLocation, schema: subSchema }}
+                        isRoot={false}
+                    />
+                </div>
+            ))}
+        </div>
+    );
+
     if (schema.type === 'array' && schema.items) {
-        const itemSchema = schema.items as SchemaObject;
+        const itemSchema = schema.items;
         return (
             <div className="space-y-1 mt-2">
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    Array items:
-                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">Array items:</div>
                 {itemSchema.type === 'object' && itemSchema.properties && (
                     Object.entries(itemSchema.properties).map(([propName, propSchema]) => (
-                        <div key={propName} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
+                        <div key={propName} className="border-l-2 border-slate-300 dark:border-slate-600 pl-4">
                             <ParameterProperty
-                                parameter={{
-                                    name: propName,
-                                    in: parameterLocation,
-                                    schema: propSchema as SchemaObject,
-                                    required: itemSchema.required?.includes(propName)
-                                }}
+                                parameter={{ name: propName, in: parameterLocation, schema: propSchema, required: itemSchema.required?.includes(propName) }}
                                 isRoot={false}
                             />
                         </div>
@@ -70,14 +77,9 @@ const NestedProperties: React.FC<{
         return (
             <div className="space-y-1 mt-2">
                 {Object.entries(schema.properties).map(([propName, propSchema]) => (
-                    <div key={propName} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
+                    <div key={propName} className="border-l-2 border-slate-300 dark:border-slate-600 pl-4">
                         <ParameterProperty
-                            parameter={{
-                                name: propName,
-                                in: parameterLocation,
-                                schema: propSchema as SchemaObject,
-                                required: schema.required?.includes(propName)
-                            }}
+                            parameter={{ name: propName, in: parameterLocation, schema: propSchema, required: schema.required?.includes(propName) }}
                             isRoot={false}
                         />
                     </div>
@@ -86,71 +88,9 @@ const NestedProperties: React.FC<{
         );
     }
 
-    if (schema.oneOf) {
-        return (
-            <div className="space-y-1 mt-2">
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    One of:
-                </div>
-                {schema.oneOf.map((subSchema, index) => (
-                    <div key={index} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                        <ParameterProperty
-                            parameter={{
-                                name: `option${index + 1}`,
-                                in: parameterLocation,
-                                schema: subSchema as SchemaObject
-                            }}
-                            isRoot={false}
-                        />
-                    </div>
-                ))}
-            </div>
-        );
-    }
-
-    if (schema.anyOf) {
-        return (
-            <div className="space-y-1 mt-2">
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    Any of:
-                </div>
-                {schema.anyOf.map((subSchema, index) => (
-                    <div key={index} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                        <ParameterProperty
-                            parameter={{
-                                name: `option${index + 1}`,
-                                in: parameterLocation,
-                                schema: subSchema as SchemaObject
-                            }}
-                            isRoot={false}
-                        />
-                    </div>
-                ))}
-            </div>
-        );
-    }
-
-    if (schema.allOf) {
-        return (
-            <div className="space-y-1 mt-2">
-                <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
-                    All of:
-                </div>
-                {schema.allOf.map((subSchema, index) => (
-                    <div key={index} className="border-l-2 border-slate-200 dark:border-slate-700 pl-4">
-                        <ParameterProperty
-                            parameter={{
-                                name: `condition${index + 1}`,
-                                in: parameterLocation,
-                                schema: subSchema as SchemaObject
-                            }}
-                            isRoot={false}
-                        />
-                    </div>
-                ))}
-            </div>
-        );
-    }
+    if (schema.oneOf) return renderCompositeSchemas(schema.oneOf, 'One of:', 'option');
+    if (schema.anyOf) return renderCompositeSchemas(schema.anyOf, 'Any of:', 'option');
+    if (schema.allOf) return renderCompositeSchemas(schema.allOf, 'All of:', 'condition');
 
     return null;
 };
@@ -169,52 +109,6 @@ const ParameterProperty: React.FC<{
         (Array.isArray(schema?.anyOf) && schema.anyOf.length > 0) ||
         (Array.isArray(schema?.allOf) && schema.allOf.length > 0);
 
-    const renderPropertyDetails = (): JSX.Element[] => {
-        const details: JSX.Element[] = [];
-
-        // Type badge
-        if (schema) {
-            details.push(
-                <Badge key="type" variant="outline" className="text-xs border-slate-200 dark:border-slate-700">
-                    {renderSchemaType(schema)}
-                </Badge>
-            );
-        }
-
-        // Required badge
-        if (parameter.required) {
-            details.push(
-                <Badge key="required" variant="outline"
-                       className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
-                    required
-                </Badge>
-            );
-        }
-
-        if (schema) {
-            if (schema.format) {
-                details.push(
-                    <Badge key="format" variant="outline"
-                           className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
-                        {schema.format}
-                    </Badge>
-                );
-            }
-
-            if (schema.default !== undefined) {
-                details.push(
-                    <Badge key="default" variant="outline"
-                           className="text-xs bg-gray-50 dark:bg-gray-900/30 border-gray-200 dark:border-gray-800">
-                        default: {JSON.stringify(schema.default)}
-                    </Badge>
-                );
-            }
-
-            // TODO: Add more badges here
-        }
-
-        return details;
-    };
 
     const renderEnumBadges = () => {
         if (!schema?.enum) return null;
@@ -222,13 +116,13 @@ const ParameterProperty: React.FC<{
         return (
             <div className="flex flex-wrap items-center gap-1 mt-1">
                 <span className="text-xs text-gray-600 dark:text-gray-400">enum:</span>
-                {schema.enum.map((value) => (
+                {schema.enum.map((value, i) => (
                     <Badge
-                        key={value}
+                        key={i}
                         variant="outline"
                         className="text-xs bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800"
                     >
-                        {value}
+                        {JSON.stringify(value)}
                     </Badge>
                 ))}
             </div>
@@ -240,20 +134,15 @@ const ParameterProperty: React.FC<{
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                 <CollapsibleTrigger className="group flex items-start gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded">
                     {hasChildren && (
-                        <div className="text-gray-500 dark:text-gray-400 mt-1">
-                            {isOpen ?
-                                <ChevronDown className="h-4 w-4" /> :
-                                <ChevronRight className="h-4 w-4" />
-                            }
-                        </div>
+                        <ChevronRight className="h-4 w-4 mt-1 shrink-0 text-gray-500 dark:text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
                     )}
                     <div className="flex flex-col gap-1 text-left">
                         <div className="flex items-center gap-2">
                             <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                                {parameter.name}
+                                {parameter.name}{parameter.required && <span className="text-red-500 ml-0.5">*</span>}
                             </span>
                             <div className="flex flex-wrap gap-1 items-center">
-                                {renderPropertyDetails()}
+                                {schema && <SchemaBadges schema={schema} />}
                             </div>
                         </div>
                         {(parameter.description || schema?.enum) && (

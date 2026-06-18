@@ -2,11 +2,11 @@ import React from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
-import {ResponseObject, SchemaObject, HeaderObject, ExampleObject} from "@/types/unified-openapi-types";
+import {ResponseObject, SchemaObject, HeaderObject} from "@/types/unified-openapi-types";
 import SchemaViewer from './SchemaViewer';
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
-import {renderSchemaType} from "@/utils/openapi";
+import {renderSchemaType, isEmptySchema} from "@/utils/openapi";
 
 interface ResponseViewerProps {
     responses: { [code: string]: ResponseObject }
@@ -26,7 +26,7 @@ const STATUS_STYLES = {
     '3': {
         base: 'text-yellow-600 dark:text-yellow-400 hover:text-white data-[state=active]:text-white',
         hover: 'hover:bg-yellow-500 dark:text-white',
-        active: 'data-[state=active]:bg-yellow-500 bg-green-500 dark:text-white'
+        active: 'data-[state=active]:bg-yellow-500 bg-yellow-500 dark:text-white'
     },
     '4': {
         base: 'text-orange-600 dark:text-orange-400 hover:text-white data-[state=active]:text-white',
@@ -104,7 +104,7 @@ const StatusTab: React.FC<{
         <TabsTrigger
             value={code}
             className={cn(
-                "transition-colors font-medium",
+                "flex-1 transition-colors font-medium",
                 styles.base,
                 styles.hover,
                 isActive && styles.active
@@ -115,35 +115,9 @@ const StatusTab: React.FC<{
     );
 };
 
-interface ContentTypeTabProps {
-    contentType: string;
-    schema: SchemaObject;
-    description?: string;
-    examples?: { [key: string]: ExampleObject };
-}
-
-const ContentTypeTab: React.FC<ContentTypeTabProps> = ({
-                                                           contentType,
-                                                           schema,
-                                                           description,
-                                                           examples
-                                                       }) => {
-    return (
-        <div className="space-y-4">
-            <SchemaViewer
-                schema={schema}
-                contentType={contentType}
-                description={description}
-                examples={examples}
-            />
-        </div>
-    );
-};
 
 const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
-    if (!responses) return null;
-
-    const responseKeys = Object.keys(responses);
+    const responseKeys = React.useMemo(() => responses ? Object.keys(responses) : [], [responses]);
     const defaultTab = responseKeys.length > 0 ? responseKeys[0] as string : '';
     const [activeTab, setActiveTab] = React.useState<string>(defaultTab);
     const [activeContentType, setActiveContentType] = React.useState<string | null>(null);
@@ -159,9 +133,10 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
                 setActiveTab(responseKeys[0] as string);
             }
         }
-    }, [responses, activeTab]);
+    }, [responses, activeTab, responseKeys]);
 
     React.useEffect(() => {
+        if (!responses) return;
         const currentResponse = responses[activeTab];
         if (currentResponse) {
             const contentTypes = getContentTypes(currentResponse);
@@ -172,12 +147,12 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
         }
     }, [activeTab, responses]);
 
-    if (responseKeys.length === 0) return null;
+    if (!responses || responseKeys.length === 0) return null;
 
     return (
         <div className="space-y-6">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="w-full justify-center gap-2 h-auto p-1 bg-muted">
+                <TabsList className="w-full flex-wrap justify-center gap-2 h-auto p-1 bg-muted">
                     {Object.entries(responses).map(([code]) => (
                         <StatusTab
                             key={code}
@@ -211,12 +186,12 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
                                                 onValueChange={setActiveContentType}
                                                 className="w-full"
                                             >
-                                                <TabsList className="w-full justify-center gap-2 h-auto bg-muted">
+                                                <TabsList className="w-full h-auto bg-muted">
                                                     {contentTypes.map(contentType => (
                                                         <TabsTrigger
                                                             key={contentType}
                                                             value={contentType}
-                                                            className="text-sm"
+                                                            className="flex-1 text-sm"
                                                         >
                                                             {contentType}
                                                         </TabsTrigger>
@@ -229,23 +204,34 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
 
                                                     return (
                                                         <TabsContent key={contentType} value={contentType}>
-                                                            <ContentTypeTab
-                                                                contentType={contentType}
-                                                                schema={content.schema}
-                                                                description={response.description}
-                                                                examples={content.examples}
-                                                            />
+                                                            {isEmptySchema(content.schema) ? (
+                                                                <p className="text-sm text-muted-foreground italic">No schema defined.</p>
+                                                            ) : (
+                                                                <SchemaViewer
+                                                                    contentType={contentType}
+                                                                    schema={content.schema}
+                                                                    description={response.description}
+                                                                    examples={content.examples}
+                                                                />
+                                                            )}
                                                         </TabsContent>
                                                     );
                                                 })}
                                             </Tabs>
                                         ) : contentTypes[0] && response.content?.[contentTypes[0]]?.schema ? (
-                                            <ContentTypeTab
-                                                contentType={contentTypes[0]}
-                                                schema={response.content?.[contentTypes[0]]?.schema as SchemaObject}
-                                                description={response.description}
-                                                examples={response.content?.[contentTypes[0]]?.examples}
-                                            />
+                                            (() => {
+                                                const schema = response.content?.[contentTypes[0]]?.schema as SchemaObject;
+                                                return isEmptySchema(schema) ? (
+                                                    <p className="text-sm text-muted-foreground italic">No schema defined.</p>
+                                                ) : (
+                                                    <SchemaViewer
+                                                        contentType={contentTypes[0]}
+                                                        schema={schema}
+                                                        description={response.description}
+                                                        examples={response.content?.[contentTypes[0]]?.examples}
+                                                    />
+                                                );
+                                            })()
                                         ) : null}
                                     </>
                                 )}
