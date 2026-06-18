@@ -53,6 +53,9 @@ const DEFAULT_REQUEST_OPTIONS: PostmanRequestOptions = {
 const getSelectKey = (lang: FlattenedLanguage) =>
     lang.variant ? `${lang.language.key}:${lang.variant}` : lang.language.key;
 
+const findDefaultLanguage = (langs: FlattenedLanguage[]): FlattenedLanguage =>
+    langs.find(l => l.language.key === 'curl') ?? langs[0] as FlattenedLanguage;
+
 const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }) => {
     const { computedUrl } = useOpenAPIContext();
     const [languages, setLanguages] = useState<FlattenedLanguage[]>([]);
@@ -68,7 +71,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }
         );
         setLanguages(flattenedLanguages);
         if (flattenedLanguages.length > 0) {
-            setSelectedLanguage(flattenedLanguages[0] as FlattenedLanguage);
+            setSelectedLanguage(findDefaultLanguage(flattenedLanguages));
         }
     }, []);
 
