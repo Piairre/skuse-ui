@@ -49,7 +49,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                 <Badge className={`${getBadgeColor(operation.method.toLowerCase())} text-white font-mono px-3 py-1 shrink-0`}>
                     {operation.method}
                 </Badge>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                     <h2 className="text-base font-semibold font-mono leading-snug truncate">
                         {operation.path}
                     </h2>
@@ -57,6 +57,12 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                         <p className="text-sm text-muted-foreground mt-0.5">{operation.summary}</p>
                     )}
                 </div>
+                {operation.security && (
+                    <Badge variant="outline" className="shrink-0 gap-1.5 border-amber-400 text-amber-600 dark:text-amber-400">
+                        <Lock className="h-3.5 w-3.5" />
+                        Authentication Required
+                    </Badge>
+                )}
             </div>
 
             <div className="grid grid-cols-5 gap-6 p-4">
@@ -86,12 +92,6 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                         </TabsList>
 
                         <TabsContent value="info" className="mt-4 space-y-4">
-                            {operation.security && (
-                                <Badge variant="outline" className="gap-1.5 border-amber-400 text-amber-600 dark:text-amber-400">
-                                    <Lock className="h-3.5 w-3.5" />
-                                    Authentication Required
-                                </Badge>
-                            )}
                             {operation.deprecated && (
                                 <Alert variant="destructive">
                                     <AlertDescription>
