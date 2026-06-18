@@ -22,12 +22,14 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
     return (
         <div className="h-screen flex flex-col">
             <div className="flex flex-1 overflow-hidden">
-                <div className="w-70 border-r sticky top-0 h-screen overflow-y-auto">
+                <div className="w-80 border-r sticky top-0 h-screen overflow-y-auto">
                     <Sidebar />
                 </div>
-                <div className="flex-1 overflow-y-auto m-2">
+                <div className="flex-1 overflow-y-auto flex flex-col">
                     {showMinimifiedInfo && <MinimifiedInfo />}
-                    <Outlet />
+                    <div className="p-4 flex-1">
+                        <Outlet />
+                    </div>
                 </div>
             </div>
         </div>

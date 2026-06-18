@@ -123,8 +123,7 @@ export const OAuth2Method: React.FC<{
     const availableFlows = Object.keys(scheme.flows) as Array<FlowType>;
 
     const [selectedFlow, setSelectedFlow] = useState<FlowType | null>(
-        // TODO: Fix incorrect type
-        availableFlows.length > 0 ? availableFlows[0] : ''
+        availableFlows[0] ?? null
     );
     const [open, setOpen] = useState(false);
 

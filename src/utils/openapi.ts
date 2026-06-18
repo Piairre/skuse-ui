@@ -1,12 +1,96 @@
 import {
-    JsonValue,
     SchemaObject,
     OperationObject,
     PathsObject,
     EnhancedOperationObject,
     TaggedOperationsMap,
     HttpMethod,
+    OpenAPIInputDocument,
+    UnifiedOpenAPI,
 } from '@/types/openapi';
+
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+type Reference = { $ref: string };
+const isReference = (obj: unknown): obj is Reference =>
+    !!obj && typeof obj === 'object' && '$ref' in obj;
+
+const mergeObjects = (obj1: unknown, obj2: unknown): unknown => {
+    if (!obj1 || typeof obj1 !== 'object') return obj2;
+    if (!obj2 || typeof obj2 !== 'object') return obj1;
+    const result: Record<string, unknown> = { ...(obj1 as Record<string, unknown>) };
+    for (const [key, value2] of Object.entries(obj2 as Record<string, unknown>)) {
+        const v1 = result[key];
+        if (key === 'required' && Array.isArray(value2) && Array.isArray(v1)) {
+            result[key] = Array.from(new Set([...v1, ...value2]));
+        } else if (key === 'properties' && typeof value2 === 'object' && typeof v1 === 'object') {
+            result[key] = mergeObjects(v1, value2);
+        } else if (key === 'items' && typeof value2 === 'object') {
+            result[key] = v1 && Object.keys(v1 as object).length > 0 ? mergeObjects(v1, value2) : value2;
+        } else if (Array.isArray(value2)) {
+            result[key] = Array.isArray(v1) ? [...v1, ...value2] : value2;
+        } else if (typeof value2 === 'object') {
+            result[key] = key in result ? mergeObjects(v1, value2) : value2;
+        } else {
+            result[key] = value2;
+        }
+    }
+    return result;
+};
+
+const resolveReference = (ref: string, document: OpenAPIInputDocument): unknown => {
+    const parts = ref.split('/').slice(1);
+    let current: unknown = document;
+    for (const part of parts) {
+        if (current && typeof current === 'object' && part in current) {
+            current = (current as Record<string, unknown>)[part];
+        } else {
+            throw new Error(`Invalid reference: ${ref}`);
+        }
+    }
+    const resolved: Record<string, unknown> = typeof current === 'object' ? { ...(current as object) } : {};
+    resolved['ref'] = ref;
+    resolved['refName'] = parts[parts.length - 1];
+    if (!resolved['type']) {
+        const props = resolved['properties'];
+        if (props && typeof props === 'object' && Object.keys(props).length > 0) resolved['type'] = 'object';
+        else if (resolved['items']) resolved['type'] = 'array';
+        else { resolved['type'] = 'object'; resolved['properties'] = {}; }
+    }
+    return resolved;
+};
+
+const resolveAllOf = (schema: Record<string, unknown>, document: OpenAPIInputDocument, visited: Set<string>): unknown => {
+    if (!schema['allOf'] || !Array.isArray(schema['allOf'])) return schema;
+    const resolved = schema['allOf'].map((sub: unknown) => resolveReferences(sub, document, visited));
+    const merged = resolved.reduce((acc: unknown, cur: unknown) => mergeObjects(acc, cur), {});
+    const { allOf: _, ...rest } = schema; // eslint-disable-line @typescript-eslint/no-unused-vars
+    return mergeObjects(merged, rest);
+};
+
+const resolveReferences = (obj: unknown, document: OpenAPIInputDocument, visited = new Set<string>()): unknown => {
+    if (!obj || typeof obj !== 'object') return obj;
+    if (isReference(obj)) {
+        if (!visited.has(obj.$ref)) {
+            visited.add(obj.$ref);
+            return resolveReferences(resolveReference(obj.$ref, document), document, visited);
+        }
+    }
+    if ('allOf' in obj) return resolveAllOf(obj as Record<string, unknown>, document, visited);
+    if (Array.isArray(obj)) return obj.map(item => resolveReferences(item, document, new Set(visited)));
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+        result[key] = resolveReferences(value, document, new Set(visited));
+    }
+    return result;
+};
+
+const resolveOpenAPIDocument = (document: OpenAPIInputDocument): UnifiedOpenAPI => {
+    const copy = JSON.parse(JSON.stringify(document)) as Record<string, unknown>;
+    if (copy['paths']) copy['paths'] = resolveReferences(copy['paths'], document);
+    if (copy['components']) copy['components'] = resolveReferences(copy['components'], document);
+    return copy as unknown as UnifiedOpenAPI;
+};
 
 const validHttpMethods = new Set<HttpMethod>([
     'GET', 'PUT', 'POST', 'DELETE', 'OPTIONS', 'HEAD', 'PATCH', 'TRACE'
@@ -299,6 +383,7 @@ const isEmptySchema = (schema: SchemaObject): boolean => {
 };
 
 export {
+    resolveOpenAPIDocument,
     groupEndpointsByTags,
     findOperationByOperationIdAndTag,
     getBadgeColor,

@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedOperationObject } from "@/types/openapi";
 import { getBadgeColor, getOperationId, groupEndpointsByTags } from "@/utils/openapi";
-import { useOpenAPIContext } from "@/hooks/useOpenAPIContext";
+import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 import { Link, useLocation } from "@tanstack/react-router";
-import { useTheme } from "@/hooks/useTheme";
+import { useTheme } from "@/components/theme-provider";
 import { Switch } from "@/components/ui/switch";
 
 const Sidebar: React.FC = () => {
