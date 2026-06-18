@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useOpenAPIContext } from './OpenAPIContext';
 import { resolveOpenAPIDocument } from "@/utils/openapi";
 import {OpenAPIInputDocument, ServerObject, UnifiedOpenAPI} from "@/types/unified-openapi-types";
@@ -37,6 +37,12 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
         setComputedUrl,
         setServerVariables
     } = useOpenAPIContext();
+
+    const [retryCount, setRetryCount] = useState(0);
+    const retry = () => {
+        setError(null);
+        setRetryCount(c => c + 1);
+    };
 
     useEffect(() => {
         async function fetchSpec() {
@@ -77,7 +83,7 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
         }
 
         fetchSpec();
-    }, [openApiUrl, setSpec, setLoading, setError, setComputedUrl, setServerVariables]);
+    }, [openApiUrl, retryCount, setSpec, setLoading, setError, setComputedUrl, setServerVariables]);
 
-    return { spec, loading, error };
+    return { spec, loading, error, retry };
 }

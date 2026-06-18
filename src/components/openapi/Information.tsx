@@ -11,9 +11,9 @@ const Information: React.FC = () => {
     const {spec} = useOpenAPIContext();
 
     return (
-        <Card className="w-full">
+        <Card className="w-full rounded-none border-x-0 border-t-0 md:rounded-lg md:border">
             <CardHeader className="pb-4">
-                <div className="flex items-start justify-between gap-6">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
                     <div>
                         <CardTitle className="text-2xl font-bold">{spec.info.title}</CardTitle>
                         <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -26,7 +26,7 @@ const Information: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex flex-wrap justify-end items-center gap-x-4 gap-y-2 text-sm text-muted-foreground shrink-0">
+                    <div className="flex flex-wrap justify-start sm:justify-end items-center gap-x-4 gap-y-2 text-sm text-muted-foreground sm:shrink-0">
                         {spec.info.contact?.email && (
                             <a href={`mailto:${spec.info.contact.email}`}
                                className="flex items-center gap-1.5 hover:text-foreground transition-colors">

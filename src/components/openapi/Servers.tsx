@@ -186,7 +186,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
 
                     {hasVariables && (
                         <div className="px-2 max-h-96 overflow-y-auto">
-                            <div className="grid grid-cols-2 gap-8">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-8">
                                 {Object.entries(selectedServer.variables ?? {}).map(([name, variable]) => (
                                     <div key={name} className="space-y-2 my-2">
                                         <label className="ms-2 text-sm font-medium block">
