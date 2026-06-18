@@ -320,8 +320,8 @@ function getOperationId(operation: EnhancedOperationObject) {
 
 function getBadgeColor(httpMethod: string): string {
     const httpMethodColors: Record<HttpMethod, string> = {
-        GET: 'bg-green-500',
-        POST: 'bg-blue-500',
+        GET: 'bg-blue-500',
+        POST: 'bg-green-500',
         PUT: 'bg-yellow-500',
         PATCH: 'bg-teal-500',
         DELETE: 'bg-red-500',
