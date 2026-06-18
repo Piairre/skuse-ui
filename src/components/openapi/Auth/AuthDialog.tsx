@@ -14,7 +14,7 @@ import {
     TabsList,
     TabsTrigger
 } from "@/components/ui/tabs";
-import { ShieldCheck } from 'lucide-react';
+import { ShieldCheck, Lock } from 'lucide-react';
 import { getAuthMethodComponent, getSchemeIcon } from './AuthMethods';
 import { SecuritySchemeObject, AuthCredential } from "@/types/unified-openapi-types";
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
@@ -56,7 +56,7 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, securitySchemes }) =>
                 {children}
             </DialogTrigger>
             <DialogContent
-                className="sm:max-w-[540px] flex flex-col max-h-[85vh] gap-0 p-0"
+                className="sm:max-w-[680px] flex flex-col max-h-[85vh] gap-0 p-0"
                 onInteractOutside={(e) => {
                     const target = (e as CustomEvent<{ originalEvent: PointerEvent }>)
                         .detail?.originalEvent?.target as HTMLElement | null;
@@ -99,12 +99,25 @@ const AuthDialog: React.FC<AuthDialogProps> = ({ children, securitySchemes }) =>
                         </div>
                     )}
 
-                    <div className="flex-1 overflow-y-auto">
+                    <div className="flex-1">
                         {schemeEntries.map(([name, scheme]) => {
                             const AuthMethodComponent = getAuthMethodComponent(scheme);
+                            const isAuthenticated = !!credentials[name];
+                            const activeOther = schemeEntries.find(([n]) => n !== name && !!credentials[n]);
                             return (
                                 <TabsContent key={name} value={name} className="m-0 px-6 py-5">
-                                    <AuthMethodComponent scheme={scheme} schemeName={name} />
+                                    {!isAuthenticated && activeOther ? (
+                                        <div className="flex items-start gap-3 px-4 py-3.5 rounded-lg bg-muted border text-sm text-muted-foreground">
+                                            <Lock className="h-4 w-4 shrink-0 mt-0.5" />
+                                            <span>
+                                                Already authenticated via{' '}
+                                                <span className="font-medium text-foreground">{activeOther[0]}</span>.
+                                                {' '}Log out first to switch methods.
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <AuthMethodComponent scheme={scheme} schemeName={name} />
+                                    )}
                                 </TabsContent>
                             );
                         })}

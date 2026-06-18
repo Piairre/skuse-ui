@@ -137,6 +137,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                             method={operation.method}
                             path={operation.path}
                             requestBody={requestValues.body}
+                            security={operation.security}
                         />
                     </div>
                 </div>

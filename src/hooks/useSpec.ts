@@ -3,24 +3,23 @@ import { useOpenAPIContext } from './OpenAPIContext';
 import { resolveOpenAPIDocument } from "@/utils/openapi";
 import {OpenAPIInputDocument, ServerObject, UnifiedOpenAPI} from "@/types/unified-openapi-types";
 
-const getCurrentUrl = () => `${window.location.protocol}//${window.location.host}`;
-
-const calculateInitialUrl = (spec: UnifiedOpenAPI) => {
+const calculateInitialUrl = (spec: UnifiedOpenAPI, specFetchUrl: string) => {
     if (!spec.servers || spec.servers.length === 0) {
-        return getCurrentUrl();
+        return new URL('/', specFetchUrl).origin;
     }
 
     const firstServer = spec.servers[0] as ServerObject;
     let url = firstServer.url;
 
-    if (url === '/') {
-        return getCurrentUrl();
-    }
-
     if (firstServer.variables) {
         Object.entries(firstServer.variables).forEach(([key, value]) => {
             url = url.replace(`{${key}}`, value.default || '');
         });
+    }
+
+    // Resolve relative URLs against the spec's fetch origin
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return new URL(url, specFetchUrl).href.replace(/\/$/, '');
     }
 
     return url;
@@ -63,7 +62,7 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
                     document.title = 'API Docs - Skuse UI';
                 }
 
-                const initialUrl = calculateInitialUrl(resolvedSpec);
+                const initialUrl = calculateInitialUrl(resolvedSpec, openApiUrl);
                 setComputedUrl(initialUrl);
 
                 if (resolvedSpec.servers?.[0]?.variables) {

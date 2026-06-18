@@ -18,10 +18,7 @@ const AuthCard: React.FC<AuthCardProps> = ({ securitySchemes }) => {
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-                <AuthButton
-                    securitySchemes={securitySchemes}
-                    className="w-full p-2"
-                />
+                <AuthButton securitySchemes={securitySchemes} />
             </CardContent>
         </Card>
     );

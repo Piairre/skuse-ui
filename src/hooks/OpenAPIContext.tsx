@@ -5,7 +5,7 @@ const STORAGE_KEY = 'skuse_auth_credentials';
 
 const loadCredentials = (): Record<string, AuthCredential> => {
     try {
-        const raw = sessionStorage.getItem(STORAGE_KEY);
+        const raw = localStorage.getItem(STORAGE_KEY);
         return raw ? JSON.parse(raw) : {};
     } catch {
         return {};
@@ -62,7 +62,7 @@ export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [credentials, setCredentials] = useState<Record<string, AuthCredential>>(loadCredentials);
 
     useEffect(() => {
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
     }, [credentials]);
 
     const setCredential = (schemeName: string, credential: AuthCredential) => {
