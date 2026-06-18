@@ -34,7 +34,10 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
                 {/* Mobile backdrop — starts below the navbar (top-16) */}
                 {sidebarOpen && (
                     <div
-                        className="fixed top-16 inset-x-0 bottom-0 bg-black/40 z-30 md:hidden"
+                        className={cn(
+                            "fixed inset-x-0 bottom-0 bg-black/40 z-30 md:hidden",
+                            showMinimifiedInfo ? "top-24" : "top-12"
+                        )}
                         onClick={() => setSidebarOpen(false)}
                     />
                 )}
@@ -42,7 +45,9 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
                 {/* Sidebar */}
                 <div className={cn(
                     "overflow-y-auto bg-background transition-transform duration-300 ease-in-out",
-                    "fixed top-16 bottom-0 left-0 w-72 z-40 shadow-2xl rounded-r-xl border-r md:rounded-r-none md:shadow-none",
+                    showMinimifiedInfo
+                        ? "fixed top-24 bottom-0 left-0 w-72 z-40 shadow-2xl rounded-r-xl border-r md:rounded-r-none md:shadow-none"
+                        : "fixed top-12 bottom-0 left-0 w-72 z-40 shadow-2xl rounded-r-xl border-r md:rounded-r-none md:shadow-none",
                     "md:sticky md:top-0 md:h-screen md:w-80 md:z-auto md:translate-x-0",
                     sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
                 )}>
