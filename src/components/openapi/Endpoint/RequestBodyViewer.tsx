@@ -4,7 +4,19 @@ import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import SchemaProperty from './SchemaProperty';
 import { generateExample } from '@/utils/openapi';
-import {MediaTypeObject, RequestBodyObject, SchemaObject} from "@/types/unified-openapi-types";
+import {
+    MediaTypeObject,
+    RequestBodyObject,
+    SchemaObject,
+    ExampleObject
+} from "@/types/unified-openapi-types";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 interface RequestBodyViewerProps {
     requestBody: RequestBodyObject;
@@ -25,15 +37,57 @@ const ContentTypeTab: React.FC<{
     );
 };
 
+const ExamplesSelector: React.FC<{
+    examples: Record<string, ExampleObject>;
+    onSelect: (value: string) => void;
+    selectedExample: string;
+}> = ({ examples, onSelect, selectedExample }) => {
+    return (
+        <div className="mb-2">
+            <Select defaultValue={selectedExample} onValueChange={onSelect}>
+                <SelectTrigger className="w-[300px]">
+                    <SelectValue placeholder="Select an example" />
+                </SelectTrigger>
+                <SelectContent>
+                    {Object.entries(examples).map(([key, example]) => (
+                        <SelectItem key={key} value={key}>
+                            {example.summary || key}
+                        </SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
+        </div>
+    );
+};
+
 const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) => {
     const contentTypes = Object.keys(requestBody.content);
-    const [activeContentType, setActiveContentType] = React.useState<string>(contentTypes[0] as string);
+    const firstContentType = contentTypes[0] as string;
+
+    const [activeContentType, setActiveContentType] = React.useState<string>(firstContentType);
+    const firstExample = requestBody.content[firstContentType]?.examples
+        ? Object.keys(requestBody.content[firstContentType].examples)[0] || ''
+        : '';
+    const [selectedExample, setSelectedExample] = React.useState<string>(firstExample);
 
     React.useEffect(() => {
         if (!contentTypes.includes(activeContentType)) {
-            setActiveContentType(contentTypes[0] as string);
+            setActiveContentType(firstContentType);
         }
     }, [contentTypes, activeContentType]);
+
+    const getExampleValue = (content: MediaTypeObject) => {
+        if (content.examples && selectedExample) {
+            return content.examples[selectedExample]?.value;
+        }
+        if (content.example) {
+            return content.example;
+        }
+        if (content.schema?.example) {
+            return content.schema.example;
+        }
+        return generateExample(content.schema as SchemaObject);
+    };
 
     return (
         <div className="space-y-6">
@@ -80,9 +134,16 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
 
                                 <div className="space-y-2">
                                     <h3 className="text-base font-medium dark:text-gray-100">Example Request</h3>
+                                    {content.examples && Object.keys(content.examples).length > 0 && (
+                                        <ExamplesSelector
+                                            examples={content.examples}
+                                            onSelect={setSelectedExample}
+                                            selectedExample={selectedExample}
+                                        />
+                                    )}
                                     <div>
                                         <FormattedMarkdown
-                                            markdown={JSON.stringify(content.schema.example || generateExample(content.schema), null, 2)}
+                                            markdown={JSON.stringify(getExampleValue(content), null, 2)}
                                             languageCode={'json'}
                                             className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
                                         />

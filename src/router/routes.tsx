@@ -10,7 +10,7 @@ import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 const rootRoute = new RootRoute({
     component: () => (
         // See examples to test doc : https://apis.guru/
-        <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/bunq.com/1.0/openapi.json"} />
+        <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/amazonaws.com/AWSMigrationHub/2017-05-31/openapi.json"} />
     )
 });
 
@@ -20,19 +20,12 @@ const indexRoute = new Route({
     component: Information
 });
 
-// Endpoint routes
 const endpointRoute = new Route({
     getParentRoute: () => rootRoute,
     path: '/$tag/$operationId',
     component: EndpointDetails
 });
 
-const endpointRouteUntagged = new Route({
-    getParentRoute: () => rootRoute,
-    path: '/$operationId',
-    component: EndpointDetails
-});
-
-const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, endpointRouteUntagged]);
+const routeTree = rootRoute.addChildren([indexRoute, endpointRoute]);
 
 export const router = new Router({ routeTree });

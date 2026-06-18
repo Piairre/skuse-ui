@@ -2,12 +2,14 @@ import React from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
-import SchemaProperty from './SchemaProperty';
-import {generateExample} from "@/utils/openapi";
-import {ResponseObject, SchemaObject} from "@/types/unified-openapi-types";
+import {ResponseObject, SchemaObject, HeaderObject, ExampleObject} from "@/types/unified-openapi-types";
+import SchemaViewer from './SchemaViewer';
+import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
+import {Badge} from "@/components/ui/badge";
+import {renderSchemaType} from "@/utils/openapi";
 
 interface ResponseViewerProps {
-    responses: {[code: string]: ResponseObject}
+    responses: { [code: string]: ResponseObject }
 }
 
 const STATUS_STYLES = {
@@ -38,10 +40,63 @@ const STATUS_STYLES = {
     }
 } as const;
 
+interface HeaderViewerProps {
+    headers: { [name: string]: HeaderObject };
+}
+
+const HeaderViewer: React.FC<HeaderViewerProps> = ({headers}) => {
+    if (!headers || Object.keys(headers).length === 0) return null;
+
+    return (
+        <Card className="mt-4">
+            <CardHeader>
+                <CardTitle className="text-base">Headers</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    {Object.entries(headers).map(([name, header]) => (
+                        <div key={name} className="space-y-2">
+                            <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm">{name}</span>
+                                {header.required && (
+                                    <Badge variant="outline"
+                                           className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+                                        required
+                                    </Badge>
+                                )}
+                                <Badge variant="outline" className="text-xs">
+                                    { (header.type || header.schema) ? (header.schema ? renderSchemaType(header.schema) : 'unknown') : '' }
+                                </Badge>
+                                {header.schema?.pattern && (
+                                    <Badge variant="outline"
+                                           className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                                        pattern
+                                    </Badge>
+                                )}
+                            </div>
+                            {header.description && (
+                                <FormattedMarkdown
+                                    markdown={header.description}
+                                    className="!text-xs text-gray-600 dark:text-gray-400"
+                                />
+                            )}
+                            {header.schema?.pattern && (
+                                <div className="text-xs font-mono bg-gray-50 dark:bg-gray-900 p-2 rounded">
+                                    Pattern: {header.schema.pattern}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
 const StatusTab: React.FC<{
     code: string;
     isActive: boolean;
-}> = ({ code, isActive }) => {
+}> = ({code, isActive}) => {
     const statusType = code.charAt(0) as keyof typeof STATUS_STYLES;
     const styles = STATUS_STYLES[statusType] ?? STATUS_STYLES['5'];
 
@@ -60,53 +115,32 @@ const StatusTab: React.FC<{
     );
 };
 
-const SchemaViewer: React.FC<{
-    schema: SchemaObject;
-    contentType: string;
-    description?: string;
-}> = ({ schema }) => {
-    return (
-        <div className="grid grid-cols-1 gap-6">
-            <div className="space-y-2">
-                <h3 className="text-base font-medium dark:text-gray-100">Response Schema</h3>
-                <div className="p-2 border rounded-lg border-slate-200 dark:border-slate-700 space-y-1">
-                    <SchemaProperty schema={schema} isRoot={true} />
-                </div>
-            </div>
-
-            <div className="space-y-2">
-                <h3 className="text-base font-medium dark:text-gray-100">Example Response</h3>
-                <div>
-                    <FormattedMarkdown
-                        markdown={JSON.stringify(schema?.example || generateExample(schema), null, 2)}
-                        languageCode={'json'}
-                        className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
-                    />
-                </div>
-            </div>
-        </div>
-    );
-};
-
 interface ContentTypeTabProps {
     contentType: string;
     schema: SchemaObject;
     description?: string;
+    examples?: { [key: string]: ExampleObject };
 }
 
-const ContentTypeTab: React.FC<ContentTypeTabProps> = ({ contentType, schema, description }) => {
+const ContentTypeTab: React.FC<ContentTypeTabProps> = ({
+                                                           contentType,
+                                                           schema,
+                                                           description,
+                                                           examples
+                                                       }) => {
     return (
         <div className="space-y-4">
             <SchemaViewer
                 schema={schema}
                 contentType={contentType}
                 description={description}
+                examples={examples}
             />
         </div>
     );
 };
 
-const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
+const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
     if (!responses) return null;
 
     const responseKeys = Object.keys(responses);
@@ -161,8 +195,12 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                             <div className="space-y-4">
                                 {response.description && (
                                     <div className="prose dark:prose-invert max-w-none">
-                                        <FormattedMarkdown markdown={response.description} />
+                                        <FormattedMarkdown markdown={response.description}/>
                                     </div>
+                                )}
+
+                                {response.headers && (
+                                    <HeaderViewer headers={response.headers}/>
                                 )}
 
                                 {contentTypes.length === 0 ? null : (
@@ -193,9 +231,9 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                                         <TabsContent key={contentType} value={contentType}>
                                                             <ContentTypeTab
                                                                 contentType={contentType}
-                                                                schema={content.schema
-                                                            }
+                                                                schema={content.schema}
                                                                 description={response.description}
+                                                                examples={content.examples}
                                                             />
                                                         </TabsContent>
                                                     );
@@ -206,6 +244,7 @@ const ResponseViewer: React.FC<ResponseViewerProps> = ({ responses }) => {
                                                 contentType={contentTypes[0]}
                                                 schema={response.content?.[contentTypes[0]]?.schema as SchemaObject}
                                                 description={response.description}
+                                                examples={response.content?.[contentTypes[0]]?.examples}
                                             />
                                         ) : null}
                                     </>

@@ -57,17 +57,28 @@ const renderSchemaType = (schema: SchemaObject): string => {
         return `${schema.type}[${itemSchema.title || itemSchema.type || ''}]`;
     }
 
-    return schema.type || 'unknown';
+    return schema.type || schema.refName || 'unknown';
 };
 
 const generateExample = (schema: SchemaObject | undefined): any => {
     if (!schema) return null;
+
     if (schema.example !== undefined) return schema.example;
 
+    if (schema.type === 'array') {
+        if (!schema.items) return [];
+
+        return [
+            generateExample(schema.items as SchemaObject)
+        ];
+    }
+
+    if (schema.ref && schema.refName && schema.properties) {
+        return generateObjectExample(schema.properties);
+    }
+
     if (schema.anyOf) {
-        const nonNullSchema = schema.anyOf.find(subSchema => {
-            return !isNullableSchema(subSchema);
-        });
+        const nonNullSchema = schema.anyOf.find(subSchema => !isNullableSchema(subSchema));
         if (nonNullSchema) {
             return generateExample(nonNullSchema);
         }
@@ -78,28 +89,8 @@ const generateExample = (schema: SchemaObject | undefined): any => {
         return generateExample(schema.oneOf[0]);
     }
 
-    if (schema.type === 'object' && schema.properties) {
-        const example = Object.fromEntries(
-            Object.entries(schema.properties).map(([key, prop]) => [
-                key,
-                generateExample(prop)
-            ])
-        );
-
-        if (schema.additionalProperties && typeof schema.additionalProperties === 'object') {
-            example['additionalProp1'] = generateExample(schema.additionalProperties as SchemaObject);
-        }
-
-        return example;
-    }
-
-    if (schema.type === 'array') {
-        if (!schema.items) return [];
-
-        const numItems = schema.minItems || 1;
-        return Array(numItems).fill(null).map(() =>
-            generateExample(schema.items as SchemaObject)
-        );
+    if (schema.type === 'object' || schema.properties) {
+        return generateObjectExample(schema.properties || {});
     }
 
     if (Array.isArray(schema.type)) {
@@ -107,14 +98,29 @@ const generateExample = (schema: SchemaObject | undefined): any => {
         return generateExample({ ...schema, type: nonNullType || schema.type[0] });
     }
 
-    const defaultValues: Record<string, any> = {
+    return generateBasicTypeExample(schema);
+};
+
+const generateObjectExample = (properties: Record<string, SchemaObject>): Record<string, any> => {
+    return Object.fromEntries(
+        Object.entries(properties).map(([key, prop]) => [
+            key,
+            generateExample(prop)
+        ])
+    );
+};
+
+const generateBasicTypeExample = (schema: SchemaObject): any => {
+    if (schema.default !== undefined) return schema.default;
+
+    const defaultValues: Record<string, () => any> = {
         string: () => {
-            if (schema.format === 'date-time') return new Date().toISOString();
-            if (schema.format === 'date') return new Date().toISOString().split('T')[0];
+            if (schema.enum?.length) return schema.enum[0];
+            if (schema.format === 'date-time') return '2024-02-19T14:30:00Z';
+            if (schema.format === 'date') return '2024-02-19';
             if (schema.format === 'email') return 'user@example.com';
             if (schema.format === 'uri') return 'https://example.com';
             if (schema.format === 'uuid') return '123e4567-e89b-12d3-a456-426614174000';
-            if (schema.enum?.length) return schema.enum[0];
             if (schema.pattern) return `pattern:${schema.pattern}`;
             if (schema.minLength) return 'a'.repeat(schema.minLength);
             return 'string';
@@ -129,11 +135,12 @@ const generateExample = (schema: SchemaObject | undefined): any => {
             if (schema.maximum !== undefined) return Math.floor(schema.maximum);
             return 0;
         },
-        boolean: () => schema.default ?? true
+        boolean: () => schema.default ?? true,
+        object: () => ({})
     };
 
     const type = schema.type as keyof typeof defaultValues;
-    return type in defaultValues ? defaultValues[type]() : null;
+    return defaultValues[type]?.() ?? schema.ref ?? null;
 };
 
 const isReference = (obj: any): obj is Reference => {
@@ -183,7 +190,27 @@ const resolveReference = (ref: string, document: OpenAPIInputDocument): any => {
         }
     }
 
-    return current;
+    const resolved = typeof current === 'object' ? { ...current } : {};
+
+    resolved.ref = ref;
+    resolved.refName = parts[parts.length - 1];
+
+    if (!resolved.type) {
+        if (resolved.properties && Object.keys(resolved.properties).length > 0) {
+            resolved.type = 'object';
+        }
+        else if (resolved.items) {
+            resolved.type = 'array';
+        }
+        else {
+            resolved.type = 'object';
+            if (!resolved.properties) {
+                resolved.properties = {};
+            }
+        }
+    }
+
+    return resolved;
 };
 
 const resolveAllOf = (schema: any, document: OpenAPIInputDocument, visited: Set<string>): any => {
@@ -279,8 +306,9 @@ function groupEndpointsByTags(paths: PathsObject): TaggedOperationsMap {
             Object.entries(pathItem).forEach(([method, operation]) => {
                 if (isValidHttpMethod(method)) {
                     const typedOperation = operation as OperationObject;
-                    const tag = typedOperation.tags?.[0] || 'default';
-                    pushToTag(tag, typedOperation, path, method);
+
+                    const tags = typedOperation.tags || ['default'];
+                    tags.map(tag => pushToTag(tag, typedOperation, path, method));
                 }
             });
         }
@@ -290,15 +318,14 @@ function groupEndpointsByTags(paths: PathsObject): TaggedOperationsMap {
 }
 
 function findOperationByOperationIdAndTag(
+    paths: PathsObject,
     operationId: string,
-    tag?: string
+    tag: string
 ): EnhancedOperationObject | null {
-    const { spec } = useOpenAPIContext();
+    if (!paths) return null;
 
-    if (!spec?.paths) return null;
-
-    const groupedEndpoints = groupEndpointsByTags(spec.paths);
-    const tagEndpoints = groupedEndpoints[tag || 'default'];
+    const groupedEndpoints = groupEndpointsByTags(paths);
+    const tagEndpoints = groupedEndpoints[tag];
 
     if (!tagEndpoints) return null;
     return tagEndpoints.find(endpoint => getOperationId(endpoint) === operationId) || null;

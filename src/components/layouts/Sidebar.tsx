@@ -14,12 +14,14 @@ const Sidebar: React.FC = () => {
     const [openTag, setOpenTag] = useState<string | null>(null);
 
     const {spec} = useOpenAPIContext();
-    const groupedEndpointsByTag = groupEndpointsByTags(spec?.paths);
+    const groupedEndpointsByTag = groupEndpointsByTags(spec.paths);
     const { theme, setTheme } = useTheme();
 
-    // Manage endpoints without tags
-    const tags = Object.entries(groupedEndpointsByTag).filter(([tag]) => tag !== 'null');
-    const untaggedEndpoints = groupedEndpointsByTag['null'] || [];
+    const tags = Object.entries(groupedEndpointsByTag);
+
+    if (tags?.length === 1 && tags[0]?.[0] && !openTag) {
+        setOpenTag(tags[0][0]);
+    }
 
     return (
         <div className="w-80 shadow-lg flex flex-col h-full">
@@ -54,17 +56,6 @@ const Sidebar: React.FC = () => {
                         </CollapsibleContent>
                     </Collapsible>
                 ))}
-
-                {untaggedEndpoints.length > 0 && (
-                    <div className="space-y-2">
-                        {untaggedEndpoints.map((operation) => (
-                            <SidebarEndpoint
-                                key={`untagged-${operation.operationId || operation.path}-${operation.method}`}
-                                operation={operation}
-                            />
-                        ))}
-                    </div>
-                )}
             </div>
 
             <div className="mt-auto border-t dark:border-zinc-700 p-4">
@@ -84,19 +75,15 @@ const Sidebar: React.FC = () => {
     );
 };
 
-const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag?: string }> = ({operation, tag}) => {
+const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag: string }> = ({operation, tag}) => {
     // Build the link to the operation
     let operationIdentifier = getOperationId(operation);
 
-    let linkTo = `/$operationIdentifier`;
+    let linkTo = `/$tag/$operationIdentifier`;
     let params = {
         operationIdentifier: operationIdentifier,
         ...(tag && {tag}) // Add tag to params if it exists
     };
-
-    if (tag) {
-        linkTo = `/$tag/$operationIdentifier`;
-    }
 
     return (
         <Link

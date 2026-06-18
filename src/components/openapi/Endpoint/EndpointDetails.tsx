@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, {useState, useEffect, useMemo} from 'react';
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,7 +12,6 @@ import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
 import RequestBodyViewer from "@/components/openapi/Endpoint/RequestBodyViewer";
-import EndpointSkeleton from '@/components/Skeletons/EndpointSkeleton';
 import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 
 interface TabPanelProps {
@@ -67,9 +66,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                     </span>
                 )}
 
-                {operation.description && (
-                    <FormattedMarkdown markdown={operation.description} maxLength={1000} />
-                )}
+                <FormattedMarkdown markdown={operation.description || '_No description provided_'} maxLength={1000} />
             </div>
 
             {operation.deprecated && (
@@ -198,9 +195,8 @@ const EndpointDetails: React.FC = () => {
 
     const operation = useMemo(() => {
         if (!loading && spec) {
-            return findOperationByOperationIdAndTag(operationId, tag);
+            return findOperationByOperationIdAndTag(spec.paths, operationId, tag);
         }
-        return null;
     }, [loading, spec, operationId, tag]);
 
     useEffect(() => {
