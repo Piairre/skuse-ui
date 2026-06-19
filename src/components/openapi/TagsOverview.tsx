@@ -110,7 +110,7 @@ const TagsOverview: React.FC = () => {
                 plugins={[WheelGesturesPlugin() as never]}
                 className="w-full"
             >
-                <CarouselContent className="-ml-3">
+                <CarouselContent className="-ml-3 justify-center">
                     {tagGroups.map(([tag, endpoints]) => (
                         <CarouselItem key={tag} className="pl-3 basis-[min(calc(50%-6px),300px)]">
                             <TagCard tag={tag} endpoints={endpoints} meta={tagMeta.get(tag)} />
