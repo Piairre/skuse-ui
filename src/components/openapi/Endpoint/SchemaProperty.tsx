@@ -2,7 +2,7 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, ChevronsUpDown, ChevronsDownUp } from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { renderSchemaType, flattenSchema } from "@/utils/openapi";
 import { SchemaObject } from "@/types/unified-openapi-types";
@@ -310,7 +310,34 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                     )}>
                         <ChevronRight className="h-4 w-4 mt-1 shrink-0 text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
                         {headerContent}
-                        {!isOpen && childCount && (
+                        {isRoot && (
+                            <div className="flex items-center gap-1 ml-auto shrink-0" onClick={e => e.stopPropagation()}>
+                                {!isOpen && childCount && (
+                                    <span className="text-xs text-muted-foreground mr-1">
+                                        {childCount.count} {childCount.label}
+                                    </span>
+                                )}
+                                {expandCtx?.dispatch && (
+                                    <>
+                                        <button
+                                            onClick={() => expandCtx.dispatch!(true)}
+                                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        >
+                                            <ChevronsUpDown className="h-3 w-3" />
+                                            Expand all
+                                        </button>
+                                        <button
+                                            onClick={() => expandCtx.dispatch!(false)}
+                                            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1.5 py-0.5 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                        >
+                                            <ChevronsDownUp className="h-3 w-3" />
+                                            Collapse all
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                        {!isRoot && !isOpen && childCount && (
                             <span className="shrink-0 self-center text-xs text-muted-foreground">
                                 {childCount.count} {childCount.label}
                             </span>

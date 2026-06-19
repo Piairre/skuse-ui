@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Tag } from 'lucide-react';
+import { Tag, Database } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
     Carousel,
@@ -64,7 +64,9 @@ const TagsOverview: React.FC = () => {
         [spec.paths]
     );
 
-    if (tagGroups.length === 0) return null;
+    const schemaCount = Object.keys(spec.components?.schemas ?? {}).length;
+
+    if (tagGroups.length === 0 && schemaCount === 0) return null;
 
     return (
         <div className="rounded-xl bg-muted/50 p-4 space-y-3">
@@ -84,8 +86,24 @@ const TagsOverview: React.FC = () => {
                             <TagCard tag={tag} endpoints={endpoints} />
                         </CarouselItem>
                     ))}
+                    {schemaCount > 0 && (
+                        <CarouselItem key="__models__" className="pl-3 basis-[min(calc(50%-6px),300px)]">
+                            <Link
+                                to="/models"
+                                className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border/60 bg-background p-3 h-full min-h-[120px] hover:bg-muted/50 transition-colors group"
+                            >
+                                <Database className="h-8 w-8 text-muted-foreground group-hover:text-foreground transition-colors" />
+                                <div className="text-center">
+                                    <p className="text-sm font-semibold">View Models</p>
+                                    <p className="text-xs text-muted-foreground mt-0.5">
+                                        {schemaCount} schema{schemaCount > 1 ? 's' : ''}
+                                    </p>
+                                </div>
+                            </Link>
+                        </CarouselItem>
+                    )}
                 </CarouselContent>
-                {tagGroups.length > 2 && (
+                {tagGroups.length > 1 && (
                     <>
                         <CarouselPrevious className="-left-3" />
                         <CarouselNext className="-right-3" />

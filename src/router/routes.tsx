@@ -6,6 +6,7 @@ import {
 import Information from '@/components/openapi/Information';
 import { SkuseDocumentation } from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
+import Models from "@/components/openapi/Models";
 
 const rootRoute = new RootRoute({
     component: () => (
@@ -26,6 +27,12 @@ const endpointRoute = new Route({
     component: EndpointDetails
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, endpointRoute]);
+const modelsRoute = new Route({
+    getParentRoute: () => rootRoute,
+    path: '/models',
+    component: Models
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, modelsRoute]);
 
 export const router = new Router({ routeTree });

@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Moon, Sun, Search, X } from 'lucide-react';
+import { ChevronDown, Moon, Sun, Search, X, Database } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -136,6 +136,22 @@ const Sidebar: React.FC = () => {
                     ))
                 )}
             </div>
+
+            {Object.keys(spec.components?.schemas ?? {}).length > 0 && (
+                <div className="border-t dark:border-zinc-700 px-2 py-2">
+                    <Link
+                        to="/models"
+                        className="flex items-center gap-2 px-2 py-1.5 rounded border-l-4 border-transparent hover:border-primary/50 hover:bg-secondary/20 transition-all duration-200 group"
+                        activeProps={{ className: '!border-primary bg-primary/5 dark:bg-primary/10' }}
+                    >
+                        <Database className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-colors shrink-0" />
+                        <span className="text-sm font-semibold">Models</span>
+                        <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-4 font-normal">
+                            {Object.keys(spec.components?.schemas ?? {}).length}
+                        </Badge>
+                    </Link>
+                </div>
+            )}
 
             <div className="mt-auto border-t dark:border-zinc-700 p-4">
                 <div className="flex items-center justify-between">
