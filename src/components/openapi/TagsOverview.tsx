@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Tag, Database } from 'lucide-react';
+import { Tag, Database, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import {
     Carousel,
@@ -16,17 +16,41 @@ import { EnhancedOperationObject } from '@/types/openapi';
 
 const MAX_VISIBLE = 5;
 
-const TagCard: React.FC<{ tag: string; endpoints: EnhancedOperationObject[] }> = ({ tag, endpoints }) => {
+interface TagMeta {
+    description?: string;
+    externalDocs?: { url: string; description?: string };
+}
+
+const TagCard: React.FC<{ tag: string; endpoints: EnhancedOperationObject[]; meta?: TagMeta }> = ({ tag, endpoints, meta }) => {
     const visible = endpoints.slice(0, MAX_VISIBLE);
     const extra = endpoints.length - MAX_VISIBLE;
 
     return (
         <div className="rounded-lg border border-border/60 bg-background p-3 space-y-2 h-full">
-            <div className="flex items-center justify-between gap-2 pb-1.5 border-b border-border/40">
-                <span className="text-sm font-semibold truncate">{tag}</span>
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal shrink-0">
-                    {endpoints.length}
-                </Badge>
+            <div className="pb-1.5 border-b border-border/40">
+                <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="text-sm font-semibold truncate">{tag}</span>
+                        {meta?.externalDocs && (
+                            <a
+                                href={meta.externalDocs.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title={meta.externalDocs.description ?? 'External docs'}
+                                onClick={e => e.stopPropagation()}
+                                className="shrink-0 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                <ExternalLink className="h-3 w-3" />
+                            </a>
+                        )}
+                    </div>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal shrink-0">
+                        {endpoints.length}
+                    </Badge>
+                </div>
+                {meta?.description && (
+                    <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{meta.description}</p>
+                )}
             </div>
             <div className="space-y-0.5">
                 {visible.map((op) => (
@@ -64,6 +88,12 @@ const TagsOverview: React.FC = () => {
         [spec.paths]
     );
 
+    const tagMeta = useMemo(() => {
+        const map = new Map<string, TagMeta>();
+        spec.tags?.forEach(t => map.set(t.name, { description: t.description, externalDocs: t.externalDocs }));
+        return map;
+    }, [spec.tags]);
+
     const schemaCount = Object.keys(spec.components?.schemas ?? {}).length;
 
     if (tagGroups.length === 0 && schemaCount === 0) return null;
@@ -83,7 +113,7 @@ const TagsOverview: React.FC = () => {
                 <CarouselContent className="-ml-3">
                     {tagGroups.map(([tag, endpoints]) => (
                         <CarouselItem key={tag} className="pl-3 basis-[min(calc(50%-6px),300px)]">
-                            <TagCard tag={tag} endpoints={endpoints} />
+                            <TagCard tag={tag} endpoints={endpoints} meta={tagMeta.get(tag)} />
                         </CarouselItem>
                     ))}
                     {schemaCount > 0 && (

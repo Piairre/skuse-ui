@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Moon, Sun, Search, X, Database } from 'lucide-react';
+import { ChevronDown, Moon, Sun, Search, X, Database, ExternalLink } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,12 @@ const Sidebar: React.FC = () => {
     const location = useLocation();
 
     const tags = useMemo(() => Object.entries(groupEndpointsByTags(spec.paths)), [spec.paths]);
+
+    const tagMeta = useMemo(() => {
+        const map = new Map<string, { description?: string; externalDocs?: { url: string; description?: string } }>();
+        spec.tags?.forEach(t => map.set(t.name, { description: t.description, externalDocs: t.externalDocs }));
+        return map;
+    }, [spec.tags]);
 
     // Current tag derived from URL: /$tag/$operationId
     const currentTag = decodeURIComponent(location.pathname.split('/')[1] ?? '');
@@ -110,13 +116,32 @@ const Sidebar: React.FC = () => {
                             <CollapsibleTrigger asChild>
                                 <Button
                                     variant="ghost"
-                                    className="w-full justify-between hover:bg-secondary/20 dark:hover:bg-zinc-700/50 mb-1 hover:text-primary border-l-4 border-transparent hover:border-primary transition-all duration-200"
+                                    className="w-full justify-between hover:bg-secondary/20 dark:hover:bg-zinc-700/50 mb-1 hover:text-primary border-l-4 border-transparent hover:border-primary transition-all duration-200 h-auto py-1.5"
                                 >
-                                    <div className="flex items-center gap-2">
-                                        <span className="font-semibold">{tag}</span>
-                                        <span className="text-xs text-muted-foreground font-normal tabular-nums">
-                                            {endpoints.length}
-                                        </span>
+                                    <div className="flex flex-col items-start gap-0.5 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-semibold">{tag}</span>
+                                            <span className="text-xs text-muted-foreground font-normal tabular-nums">
+                                                {endpoints.length}
+                                            </span>
+                                            {tagMeta.get(tag)?.externalDocs && (
+                                                <a
+                                                    href={tagMeta.get(tag)!.externalDocs!.url}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    title={tagMeta.get(tag)!.externalDocs!.description ?? 'External docs'}
+                                                    onClick={e => e.stopPropagation()}
+                                                    className="text-muted-foreground hover:text-foreground transition-colors"
+                                                >
+                                                    <ExternalLink className="h-3 w-3" />
+                                                </a>
+                                            )}
+                                        </div>
+                                        {tagMeta.get(tag)?.description && (
+                                            <span className="text-[11px] text-muted-foreground font-normal truncate max-w-[160px]">
+                                                {tagMeta.get(tag)!.description}
+                                            </span>
+                                        )}
                                     </div>
                                     <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${effectiveOpenTags.has(tag) ? 'rotate-180' : ''}`} />
                                 </Button>
