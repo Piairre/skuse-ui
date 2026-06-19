@@ -6,6 +6,7 @@ import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import Servers from "@/components/openapi/Servers";
 import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 import AuthCard from "@/components/openapi/Auth/AuthCard";
+import TagsOverview from "@/components/openapi/TagsOverview";
 
 const SectionCard: React.FC<{ title: string; icon: React.ReactNode; children: React.ReactNode }> = ({ title, icon, children }) => (
     <div className="rounded-xl bg-muted/50 p-4 space-y-3">
@@ -98,6 +99,8 @@ const Information: React.FC = () => {
                         <FormattedMarkdown className="break-words" markdown={spec.info.description} maxLength={5000} />
                     </div>
                 )}
+
+                <TagsOverview />
             </div>
         </Card>
     );
