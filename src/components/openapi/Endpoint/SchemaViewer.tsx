@@ -20,7 +20,15 @@ interface SchemaViewerProps {
     examples?: { [key: string]: ExampleObject };
 }
 
-const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples }) => {
+const contentTypeToLanguage = (contentType: string): string => {
+    if (contentType.includes('json')) return 'json';
+    if (contentType.includes('xml')) return 'xml';
+    if (contentType.includes('yaml')) return 'yaml';
+    if (contentType.includes('html')) return 'html';
+    return 'text';
+};
+
+const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples, contentType }) => {
     const [selectedExample, setSelectedExample] = useState<string | null>(() : string | null => {
         if (!examples || Object.keys(examples).length === 0) return null;
         return Object.keys(examples)[0] || null;
@@ -107,7 +115,7 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples }) => {
                         return (
                             <FormattedMarkdown
                                 markdown={typeof val === 'string' ? val : JSON.stringify(val, null, 2)}
-                                languageCode={'json'}
+                                languageCode={contentTypeToLanguage(contentType)}
                                 className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
                             />
                         );

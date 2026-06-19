@@ -19,6 +19,8 @@ interface CodeExamplesProps {
     hasRequestBody?: boolean;
     defaultContentType?: string;
     security?: Array<Record<string, string[]>>;
+    exampleQueryParams?: Record<string, string>;
+    exampleHeaderParams?: Array<{ key: string; value: string }>;
 }
 
 type HeaderDef = { key: string; value: string };
@@ -111,7 +113,7 @@ const getSelectKey = (lang: FlattenedLanguage) =>
 const findDefaultLanguage = (langs: FlattenedLanguage[]): FlattenedLanguage =>
     langs.find(l => l.language.key === 'curl') ?? langs[0] as FlattenedLanguage;
 
-const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, hasRequestBody, defaultContentType, security }) => {
+const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, hasRequestBody, defaultContentType, security, exampleQueryParams, exampleHeaderParams }) => {
     const { computedUrl, credentials, spec, preferredContentType } = useOpenAPIContext();
     const [languages, setLanguages] = useState<FlattenedLanguage[]>([]);
     const [selectedLanguage, setSelectedLanguage] = useState<FlattenedLanguage | null>(null);
@@ -140,14 +142,17 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, 
                 credentials,
             );
 
-            const urlWithQuery = Object.keys(queryParams).length
-                ? `${computedUrl}${path}?${new URLSearchParams(queryParams)}`
+            const mergedQueryParams = { ...exampleQueryParams, ...queryParams };
+            const urlWithQuery = Object.keys(mergedQueryParams).length
+                ? `${computedUrl}${path}?${new URLSearchParams(mergedQueryParams)}`
                 : `${computedUrl}${path}`;
 
             const contentType = preferredContentType ?? defaultContentType ?? 'application/json';
-            const allHeaders: HeaderDef[] = hasRequestBody
-                ? [...authHeaders, { key: 'Content-Type', value: contentType }]
-                : authHeaders;
+            const allHeaders: HeaderDef[] = [
+                ...(exampleHeaderParams ?? []),
+                ...authHeaders,
+                ...(hasRequestBody ? [{ key: 'Content-Type', value: contentType }] : []),
+            ];
 
             const request = new postman.Request({
                 method: method.toUpperCase(),
@@ -182,7 +187,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, 
             console.error('Request creation error:', error);
             setSnippet('Could not generate snippet');
         }
-    }, [method, path, requestBody, hasRequestBody, selectedLanguage, computedUrl, credentials, security, spec, preferredContentType]);
+    }, [method, path, requestBody, hasRequestBody, selectedLanguage, computedUrl, credentials, security, spec, preferredContentType, exampleQueryParams, exampleHeaderParams]);
 
     const handleSelectChange = (value: string) => {
         const found = languages.find(l => getSelectKey(l) === value);

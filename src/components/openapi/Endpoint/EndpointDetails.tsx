@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { EnhancedOperationObject } from "@/types/openapi";
-import { getBadgeColor, findOperationByOperationIdAndTag } from "@/utils/openapi";
+import { getBadgeColor, findOperationByOperationIdAndTag, generateExample } from "@/utils/openapi";
+import { SchemaObject } from "@/types/unified-openapi-types";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { ExternalLink, Lock, Copy, Check } from 'lucide-react';
 import CodeExamples from './CodeExamples';
@@ -47,6 +48,47 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
     const [requestValues] = useState({ parameters: {} as Record<string, string>, body: '' });
     const { parameters = [], requestBody, responses } = operation;
     const { spec } = useOpenAPIContext();
+
+    const exampleBody = useMemo(() => {
+        if (!requestBody) return '';
+        const contentType = Object.keys(requestBody.content)[0];
+        const schema = contentType ? requestBody.content[contentType]?.schema : undefined;
+        if (!schema) return '';
+        return JSON.stringify(generateExample(schema as SchemaObject), null, 2);
+    }, [requestBody]);
+
+    const examplePath = useMemo(() => {
+        let p = operation.path;
+        for (const param of parameters) {
+            if (param.in === 'path' && param.schema) {
+                const val = generateExample(param.schema as SchemaObject);
+                p = p.replace(`{${param.name}}`, String(val ?? param.name));
+            }
+        }
+        return p;
+    }, [operation.path, parameters]);
+
+    const exampleQueryParams = useMemo(() => {
+        const qp: Record<string, string> = {};
+        for (const param of parameters) {
+            if (param.in === 'query' && param.schema) {
+                const def = (param.schema as SchemaObject).default;
+                if (def !== null && def !== undefined) qp[param.name] = String(def);
+            }
+        }
+        return qp;
+    }, [parameters]);
+
+    const exampleHeaderParams = useMemo(() => {
+        const headers: Array<{ key: string; value: string }> = [];
+        for (const param of parameters) {
+            if (param.in === 'header' && param.schema) {
+                const val = generateExample(param.schema as SchemaObject);
+                if (val !== null && val !== undefined) headers.push({ key: param.name, value: String(val) });
+            }
+        }
+        return headers;
+    }, [parameters]);
 
     const effectiveSecurity = operation.security !== undefined ? operation.security : (spec.security ?? []);
     const requiresAuth = effectiveSecurity.length > 0;
@@ -139,11 +181,13 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                     <SectionCard>
                         <CodeExamples
                             method={operation.method}
-                            path={operation.path}
-                            requestBody={requestValues.body}
+                            path={examplePath}
+                            requestBody={requestValues.body || exampleBody}
                             hasRequestBody={!!requestBody}
                             defaultContentType={requestBody ? Object.keys(requestBody.content)[0] : undefined}
                             security={operation.security}
+                            exampleQueryParams={exampleQueryParams}
+                            exampleHeaderParams={exampleHeaderParams}
                         />
                     </SectionCard>
 

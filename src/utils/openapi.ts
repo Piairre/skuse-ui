@@ -215,6 +215,7 @@ const generateExample = (schema: SchemaObject | undefined): JsonValue => {
 
     if (s.example !== undefined) return s.example;
     if (Array.isArray(s.examples) && s.examples.length > 0) return s.examples[0];
+    if (s.const !== undefined) return s.const as JsonValue;
 
     if (Array.isArray(s.prefixItems) && s.prefixItems.length > 0) {
         return s.prefixItems.map(item => generateExample(item));
