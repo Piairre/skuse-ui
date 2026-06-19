@@ -1,0 +1,284 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Skuse Test API",
+    "version": "1.0.0",
+    "description": "Local test spec to validate Skuse features — schema.examples, global security, tag descriptions, models, etc."
+  },
+  "security": [{ "bearerAuth": [] }],
+  "tags": [
+    {
+      "name": "books",
+      "description": "Operations about books in the library",
+      "externalDocs": {
+        "description": "Books documentation",
+        "url": "https://example.com/docs/books"
+      }
+    },
+    {
+      "name": "authors",
+      "description": "Author management endpoints"
+    }
+  ],
+  "servers": [
+    { "url": "https://api.example.com/v1", "description": "Production" },
+    { "url": "https://staging.example.com/v1", "description": "Staging" }
+  ],
+  "paths": {
+    "/books": {
+      "get": {
+        "tags": ["books"],
+        "operationId": "getBooks",
+        "summary": "List all books",
+        "description": "Returns a paginated list of books. Supports filtering by author and genre.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": { "type": "integer", "default": 1 },
+            "description": "Page number"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": { "type": "integer", "default": 20 },
+            "description": "Items per page"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Filter by author name",
+            "deprecated": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of books",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookList"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["books"],
+        "operationId": "createBook",
+        "summary": "Create a book",
+        "security": [{ "bearerAuth": [] }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookInput"
+              },
+              "examples": {
+                "fiction": {
+                  "summary": "Fiction book",
+                  "value": { "title": "Dune", "author": "Frank Herbert", "genre": "fiction", "year": 1965 }
+                },
+                "nonfiction": {
+                  "summary": "Non-fiction book",
+                  "value": { "title": "Sapiens", "author": "Yuval Noah Harari", "genre": "history", "year": 2011 }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Book created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Book" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/books/{id}": {
+      "get": {
+        "tags": ["books"],
+        "operationId": "getBook",
+        "summary": "Get a book",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" },
+            "description": "Book ID"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A single book. The schema.examples array (OAS 3.1) is used here to test the multi-example selector.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": { "type": "integer" },
+                    "title": { "type": "string" },
+                    "author": { "type": "string" },
+                    "genre": { "type": "string", "enum": ["fiction", "nonfiction", "history", "science"] },
+                    "year": { "type": "integer" },
+                    "available": { "type": "boolean" }
+                  },
+                  "examples": [
+                    { "id": 1, "title": "Dune", "author": "Frank Herbert", "genre": "fiction", "year": 1965, "available": true },
+                    { "id": 2, "title": "Sapiens", "author": "Yuval Noah Harari", "genre": "history", "year": 2011, "available": false },
+                    { "id": 3, "title": "A Brief History of Time", "author": "Stephen Hawking", "genre": "science", "year": 1988, "available": true }
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Book not found"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["books"],
+        "operationId": "deleteBook",
+        "summary": "Delete a book",
+        "description": "Permanently deletes a book. This action cannot be undone.",
+        "security": [],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Deleted successfully" },
+          "403": { "description": "Forbidden" }
+        }
+      }
+    },
+    "/authors": {
+      "get": {
+        "tags": ["authors"],
+        "operationId": "getAuthors",
+        "summary": "List authors",
+        "responses": {
+          "200": {
+            "description": "List of authors",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthorList" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/authors/{id}": {
+      "get": {
+        "tags": ["authors"],
+        "operationId": "getAuthor",
+        "summary": "Get an author",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "integer" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Author details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Author" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "Book": {
+        "type": "object",
+        "description": "Represents a book in the library system",
+        "required": ["id", "title", "author"],
+        "properties": {
+          "id": { "type": "integer", "description": "Unique identifier" },
+          "title": { "type": "string", "description": "Book title" },
+          "author": { "type": "string", "description": "Author name" },
+          "genre": {
+            "type": "string",
+            "enum": ["fiction", "nonfiction", "history", "science"],
+            "description": "Book genre"
+          },
+          "year": { "type": "integer", "description": "Publication year" },
+          "available": { "type": "boolean", "description": "Whether the book is available for borrowing" }
+        }
+      },
+      "BookInput": {
+        "type": "object",
+        "description": "Payload for creating or updating a book",
+        "required": ["title", "author"],
+        "properties": {
+          "title": { "type": "string" },
+          "author": { "type": "string" },
+          "genre": { "type": "string", "enum": ["fiction", "nonfiction", "history", "science"] },
+          "year": { "type": "integer" }
+        }
+      },
+      "BookList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Book" }
+          },
+          "total": { "type": "integer" },
+          "page": { "type": "integer" },
+          "limit": { "type": "integer" }
+        }
+      },
+      "Author": {
+        "type": "object",
+        "description": "An author in the library system",
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "integer" },
+          "name": { "type": "string" },
+          "bio": { "type": "string" },
+          "birthYear": { "type": "integer" },
+          "nationality": { "type": "string" }
+        }
+      },
+      "AuthorList": {
+        "type": "object",
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Author" }
+          },
+          "total": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

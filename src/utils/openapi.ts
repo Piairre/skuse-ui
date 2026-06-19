@@ -181,6 +181,7 @@ const generateExample = (schema: SchemaObject | undefined): JsonValue => {
     const s = flattenSchema(schema);
 
     if (s.example !== undefined) return s.example;
+    if (Array.isArray(s.examples) && s.examples.length > 0) return s.examples[0];
 
     if (s.type === 'array') {
         if (!s.items) return [];

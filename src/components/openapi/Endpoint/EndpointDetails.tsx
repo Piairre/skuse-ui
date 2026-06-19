@@ -45,6 +45,10 @@ const CopyPathButton: React.FC<{ path: string }> = ({ path }) => {
 const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
     const [requestValues] = useState({ parameters: {} as Record<string, string>, body: '' });
     const { parameters = [], requestBody, responses } = operation;
+    const { spec } = useOpenAPIContext();
+
+    const effectiveSecurity = operation.security !== undefined ? operation.security : (spec.security ?? []);
+    const requiresAuth = effectiveSecurity.length > 0;
 
     const hasDescription = !!(operation.description || operation.deprecated || operation.externalDocs);
     const hasLeft = hasDescription || parameters.length > 0 || !!requestBody;
@@ -61,14 +65,14 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                     </h2>
                     <CopyPathButton path={operation.path} />
                 </div>
-                {operation.summary && (
-                    <p className="w-full text-sm text-muted-foreground -mt-1">{operation.summary}</p>
-                )}
-                {operation.security && (
-                    <Badge variant="outline" className="shrink-0 gap-1.5 border-amber-400 text-amber-600 dark:text-amber-400">
+                {requiresAuth && (
+                    <Badge variant="outline" className="ml-auto shrink-0 gap-1.5 border-amber-400 text-amber-600 dark:text-amber-400">
                         <Lock className="h-3.5 w-3.5" />
                         Authentication Required
                     </Badge>
+                )}
+                {operation.summary && (
+                    <p className="w-full text-sm text-muted-foreground -mt-1">{operation.summary}</p>
                 )}
             </div>
 

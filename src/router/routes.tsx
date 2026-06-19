@@ -11,7 +11,7 @@ import Models from "@/components/openapi/Models";
 const rootRoute = new RootRoute({
     component: () => (
         // See examples to test doc : https://apis.guru/
-        <SkuseDocumentation openApiUrl={"https://demo.api-platform.com/docs.jsonopenapi"} />
+        <SkuseDocumentation openApiUrl={"/test-spec.json"} />
     )
 });
 

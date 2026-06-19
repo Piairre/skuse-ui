@@ -31,12 +31,12 @@ const ExamplesSelector: React.FC<{
 }> = ({ examples, onSelect, selectedExample }) => (
     <div className="mb-2">
         <Select defaultValue={selectedExample} onValueChange={onSelect}>
-            <SelectTrigger className="w-[300px]">
+            <SelectTrigger className="w-[200px] h-7 text-xs">
                 <SelectValue placeholder="Select an example" />
             </SelectTrigger>
             <SelectContent>
                 {Object.entries(examples).map(([key, example]) => (
-                    <SelectItem key={key} value={key}>
+                    <SelectItem key={key} value={key} className="text-xs">
                         {example.summary || key}
                     </SelectItem>
                 ))}
@@ -59,6 +59,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
         ? Object.keys(requestBody.content[firstContentType].examples)[0] || ''
         : '';
     const [selectedExample, setSelectedExample] = React.useState<string>(firstExample);
+    const [schemaExampleIdx, setSchemaExampleIdx] = React.useState(0);
     const [expandState, setExpandState] = React.useState<{ version: number; allOpen: boolean }>({ version: 0, allOpen: false });
 
     React.useEffect(() => {
@@ -71,10 +72,13 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
     };
 
     const content = requestBody.content[activeContentType] as MediaTypeObject | undefined;
+    const schemaExamples = (content?.schema as SchemaObject | undefined)?.examples as unknown[] | undefined;
 
     const getExampleValue = (ct: MediaTypeObject) => {
         if (ct.examples && selectedExample) return ct.examples[selectedExample]?.value;
         if (ct.example) return ct.example;
+        const schemaExs = (ct.schema as SchemaObject | undefined)?.examples as unknown[] | undefined;
+        if (Array.isArray(schemaExs) && schemaExs.length > 0) return schemaExs[schemaExampleIdx];
         if (ct.schema?.example) return ct.schema.example;
         return generateExample(ct.schema as SchemaObject);
     };
@@ -145,6 +149,20 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                             onSelect={setSelectedExample}
                             selectedExample={selectedExample}
                         />
+                    )}
+                    {!content.examples && Array.isArray(schemaExamples) && schemaExamples.length > 1 && (
+                        <Select value={String(schemaExampleIdx)} onValueChange={v => setSchemaExampleIdx(Number(v))}>
+                            <SelectTrigger className="w-[180px] h-7 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {schemaExamples.map((_, i) => (
+                                    <SelectItem key={i} value={String(i)} className="text-xs">
+                                        Example {i + 1}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     )}
                     <FormattedMarkdown
                         markdown={JSON.stringify(getExampleValue(content), null, 2)}

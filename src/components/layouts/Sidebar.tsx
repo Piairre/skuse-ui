@@ -133,7 +133,7 @@ const Sidebar: React.FC = () => {
                                                     onClick={e => e.stopPropagation()}
                                                     className="text-muted-foreground hover:text-foreground transition-colors"
                                                 >
-                                                    <ExternalLink className="h-3 w-3" />
+                                                    <ExternalLink className="h-2.5 w-2.5" />
                                                 </a>
                                             )}
                                         </div>
