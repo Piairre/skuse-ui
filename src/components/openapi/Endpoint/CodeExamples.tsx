@@ -3,6 +3,7 @@ import { convert, getLanguageList } from 'postman-code-generators';
 import * as postman from 'postman-collection';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
+import { AuthCredential, SecuritySchemeObject } from '@/types/unified-openapi-types';
 import {
     Select,
     SelectContent,
@@ -15,6 +16,58 @@ interface CodeExamplesProps {
     method: string;
     path: string;
     requestBody?: string;
+    security?: Array<Record<string, string[]>>;
+}
+
+type HeaderDef = { key: string; value: string };
+
+function resolveAuthHeaders(
+    security: Array<Record<string, string[]>> | undefined,
+    securitySchemes: Record<string, SecuritySchemeObject> | undefined,
+    credentials: Record<string, AuthCredential>,
+): { headers: HeaderDef[]; queryParams: Record<string, string> } {
+    const empty = { headers: [] as HeaderDef[], queryParams: {} as Record<string, string> };
+    if (!securitySchemes) return empty;
+
+    // Candidates: endpoint security → global spec security → any set credential
+    const requirements: Array<Record<string, string[]>> = security?.length
+        ? security
+        : Object.keys(credentials).length
+            ? Object.keys(credentials).map(name => ({ [name]: [] }))
+            : [];
+
+    for (const requirement of requirements) {
+        const names = Object.keys(requirement);
+        if (!names.every(n => credentials[n])) continue;
+
+        const headers: HeaderDef[] = [];
+        const queryParams: Record<string, string> = {};
+
+        for (const name of names) {
+            const cred = credentials[name];
+            const scheme = securitySchemes[name];
+            if (!cred || !scheme) continue;
+
+            if (cred.type === 'bearer') {
+                headers.push({ key: 'Authorization', value: `Bearer ${cred.token}` });
+            } else if (cred.type === 'basic') {
+                headers.push({ key: 'Authorization', value: `Basic ${btoa(`${cred.username}:${cred.password}`)}` });
+            } else if (cred.type === 'oauth2') {
+                headers.push({ key: 'Authorization', value: `${cred.tokenType} ${cred.accessToken}` });
+            } else if (cred.type === 'apiKey') {
+                if (cred.in === 'header') {
+                    headers.push({ key: cred.name, value: cred.key });
+                } else if (cred.in === 'query') {
+                    queryParams[cred.name] = cred.key;
+                }
+                // cookie: not injectable in curl snippets
+            }
+        }
+
+        if (headers.length || Object.keys(queryParams).length) return { headers, queryParams };
+    }
+
+    return empty;
 }
 
 interface LanguageVariant {
@@ -56,8 +109,8 @@ const getSelectKey = (lang: FlattenedLanguage) =>
 const findDefaultLanguage = (langs: FlattenedLanguage[]): FlattenedLanguage =>
     langs.find(l => l.language.key === 'curl') ?? langs[0] as FlattenedLanguage;
 
-const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }) => {
-    const { computedUrl } = useOpenAPIContext();
+const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, security }) => {
+    const { computedUrl, credentials, spec } = useOpenAPIContext();
     const [languages, setLanguages] = useState<FlattenedLanguage[]>([]);
     const [selectedLanguage, setSelectedLanguage] = useState<FlattenedLanguage | null>(null);
     const [snippet, setSnippet] = useState<string>('');
@@ -79,9 +132,20 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }
         if (!selectedLanguage || !computedUrl) return;
 
         try {
+            const { headers: authHeaders, queryParams } = resolveAuthHeaders(
+                security,
+                spec.components?.securitySchemes,
+                credentials,
+            );
+
+            const urlWithQuery = Object.keys(queryParams).length
+                ? `${computedUrl}${path}?${new URLSearchParams(queryParams)}`
+                : `${computedUrl}${path}`;
+
             const request = new postman.Request({
                 method: method.toUpperCase(),
-                url: `${computedUrl}${path}`,
+                url: urlWithQuery,
+                header: authHeaders,
                 ...(requestBody && {
                     body: {
                         mode: 'raw' as const,
@@ -111,7 +175,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody }
             console.error('Request creation error:', error);
             setSnippet('Could not generate snippet');
         }
-    }, [method, path, requestBody, selectedLanguage, computedUrl]);
+    }, [method, path, requestBody, selectedLanguage, computedUrl, credentials, security, spec]);
 
     const handleSelectChange = (value: string) => {
         const found = languages.find(l => getSelectKey(l) === value);

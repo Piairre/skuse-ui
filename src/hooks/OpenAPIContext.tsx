@@ -1,5 +1,16 @@
-import React, { createContext, useState, useContext, ReactNode } from 'react';
-import { UnifiedOpenAPI } from "@/types/unified-openapi-types";
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
+import { UnifiedOpenAPI, AuthCredential } from "@/types/unified-openapi-types";
+
+const STORAGE_KEY = 'skuse_auth_credentials';
+
+const loadCredentials = (): Record<string, AuthCredential> => {
+    try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        return raw ? JSON.parse(raw) : {};
+    } catch {
+        return {};
+    }
+};
 
 // Provide a default value for the context
 const defaultSpec: UnifiedOpenAPI = {
@@ -21,6 +32,9 @@ interface OpenAPIContextType {
     setLoading: (loading: boolean) => void;
     error: Error | null;
     setError: (error: Error | null) => void;
+    credentials: Record<string, AuthCredential>;
+    setCredential: (schemeName: string, credential: AuthCredential) => void;
+    clearCredential: (schemeName: string) => void;
 }
 
 const OpenAPIContext = createContext<OpenAPIContextType>({
@@ -33,7 +47,10 @@ const OpenAPIContext = createContext<OpenAPIContextType>({
     loading: false,
     setLoading: () => {},
     error: null,
-    setError: () => {}
+    setError: () => {},
+    credentials: {},
+    setCredential: () => {},
+    clearCredential: () => {},
 });
 
 export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -42,6 +59,23 @@ export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     const [serverVariables, setServerVariables] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<Error | null>(null);
+    const [credentials, setCredentials] = useState<Record<string, AuthCredential>>(loadCredentials);
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(credentials));
+    }, [credentials]);
+
+    const setCredential = (schemeName: string, credential: AuthCredential) => {
+        setCredentials(prev => ({ ...prev, [schemeName]: credential }));
+    };
+
+    const clearCredential = (schemeName: string) => {
+        setCredentials(prev => {
+            const next = { ...prev };
+            delete next[schemeName];
+            return next;
+        });
+    };
 
     return (
         <OpenAPIContext.Provider
@@ -55,7 +89,10 @@ export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
                 loading,
                 setLoading,
                 error,
-                setError
+                setError,
+                credentials,
+                setCredential,
+                clearCredential,
             }}
         >
             {children}

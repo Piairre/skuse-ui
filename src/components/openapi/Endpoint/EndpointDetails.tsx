@@ -44,8 +44,8 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
     }, [operation.operationId, availableTabs, activeTab]);
 
     return (
-        <Card className="w-full">
-            <div className="flex items-center gap-4 px-6 py-4 border-b">
+        <Card className="w-full rounded-none border-x-0 border-t-0 md:rounded-lg md:border">
+            <div className="flex flex-wrap items-center gap-3 px-6 py-4 border-b">
                 <Badge className={`${getBadgeColor(operation.method.toLowerCase())} text-white font-mono px-3 py-1 shrink-0`}>
                     {operation.method}
                 </Badge>
@@ -65,8 +65,8 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                 )}
             </div>
 
-            <div className="grid grid-cols-5 gap-6 p-4">
-                <div className="col-span-3">
+            <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 p-4">
+                <div className="lg:col-span-3">
                     <Tabs value={activeTab} onValueChange={setActiveTab}>
                         <TabsList className="w-full">
                             <TabsTrigger value="info" className="flex-1 flex items-center gap-2">
@@ -131,12 +131,13 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                     </Tabs>
                 </div>
 
-                <div className="col-span-2 border-l border-border pl-6">
-                    <div className="sticky top-20">
+                <div className="lg:col-span-2 lg:border-l lg:border-border lg:pl-6">
+                    <div className="lg:sticky lg:top-20">
                         <CodeExamples
                             method={operation.method}
                             path={operation.path}
                             requestBody={requestValues.body}
+                            security={operation.security}
                         />
                     </div>
                 </div>
