@@ -7,6 +7,7 @@ import Information from '@/components/openapi/Information';
 import { SkuseDocumentation } from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import Models from "@/components/openapi/Models";
+import WebhookDetails from "@/components/openapi/WebhookDetails";
 
 const rootRoute = new RootRoute({
     component: () => (
@@ -33,6 +34,12 @@ const modelsRoute = new Route({
     component: Models
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, modelsRoute]);
+const webhookRoute = new Route({
+    getParentRoute: () => rootRoute,
+    path: '/webhooks/$webhookName/$operationId',
+    component: WebhookDetails
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, modelsRoute, webhookRoute]);
 
 export const router = new Router({ routeTree });

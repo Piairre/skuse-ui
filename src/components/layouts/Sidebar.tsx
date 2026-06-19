@@ -1,11 +1,11 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown, Moon, Sun, Search, X, Database, ExternalLink } from 'lucide-react';
+import { ChevronDown, Moon, Sun, Search, X, Database, ExternalLink, Webhook } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { EnhancedOperationObject } from "@/types/openapi";
-import { getBadgeColor, getOperationId, groupEndpointsByTags } from "@/utils/openapi";
+import { getBadgeColor, getOperationId, groupEndpointsByTags, groupWebhooksByName } from "@/utils/openapi";
 import { useOpenAPIContext } from "@/hooks/OpenAPIContext";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useTheme } from "@/components/theme-provider";
@@ -17,6 +17,17 @@ const Sidebar: React.FC = () => {
     const location = useLocation();
 
     const tags = useMemo(() => Object.entries(groupEndpointsByTags(spec.paths)), [spec.paths]);
+
+    const webhooks = useMemo(() =>
+        spec.webhooks ? Object.entries(groupWebhooksByName(spec.webhooks)) : [],
+    [spec.webhooks]);
+
+    const [openWebhooks, setOpenWebhooks] = useState<Set<string>>(new Set());
+    const toggleWebhook = (name: string) => setOpenWebhooks(prev => {
+        const next = new Set(prev);
+        next.has(name) ? next.delete(name) : next.add(name);
+        return next;
+    });
 
     const tagMeta = useMemo(() => {
         const map = new Map<string, { description?: string; externalDocs?: { url: string; description?: string } }>();
@@ -162,6 +173,43 @@ const Sidebar: React.FC = () => {
                 )}
             </div>
 
+            {webhooks.length > 0 && (
+                <div className="border-t dark:border-zinc-700 py-2">
+                    {webhooks.map(([name, operations]) => (
+                        <Collapsible
+                            key={`webhook-${name}`}
+                            open={openWebhooks.has(name)}
+                            onOpenChange={() => toggleWebhook(name)}
+                        >
+                            <CollapsibleTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    className="w-full justify-between hover:bg-secondary/20 dark:hover:bg-zinc-700/50 mb-1 hover:text-primary border-l-4 border-transparent hover:border-primary transition-all duration-200 h-auto py-1.5"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Webhook className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                                        <span className="font-semibold">{name}</span>
+                                        <span className="text-xs text-muted-foreground font-normal tabular-nums">{operations.length}</span>
+                                    </div>
+                                    <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${openWebhooks.has(name) ? 'rotate-180' : ''}`} />
+                                </Button>
+                            </CollapsibleTrigger>
+                            <CollapsibleContent>
+                                <div className="space-y-0.5 pl-2 pb-2">
+                                    {operations.map(op => (
+                                        <WebhookSidebarItem
+                                            key={`${name}-${op.method}`}
+                                            operation={op}
+                                            webhookName={name}
+                                        />
+                                    ))}
+                                </div>
+                            </CollapsibleContent>
+                        </Collapsible>
+                    ))}
+                </div>
+            )}
+
             {Object.keys(spec.components?.schemas ?? {}).length > 0 && (
                 <div className="border-t dark:border-zinc-700 px-2 py-2">
                     <Link
@@ -236,5 +284,26 @@ const SidebarEndpoint: React.FC<{ operation: EnhancedOperationObject; tag: strin
         </Link>
     );
 };
+
+const WebhookSidebarItem: React.FC<{ operation: EnhancedOperationObject; webhookName: string }> = ({ operation, webhookName }) => (
+    <Link
+        to="/webhooks/$webhookName/$operationId"
+        params={{ webhookName, operationId: getOperationId(operation) }}
+        className="flex items-center gap-2 px-2 py-1.5 rounded-r border-l-4 border-transparent hover:border-primary/50 hover:bg-secondary/20 transition-all duration-200 group"
+        activeProps={{ className: '!border-primary bg-primary/5 dark:bg-primary/10' }}
+    >
+        <Badge className={`${getBadgeColor(operation.method.toLowerCase())} text-white uppercase w-14 flex justify-center items-center shrink-0 text-[10px]`}>
+            {operation.method}
+        </Badge>
+        <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{webhookName}</p>
+            {(operation.summary || operation.description) && (
+                <p className="text-xs text-muted-foreground truncate">
+                    {operation.summary || operation.description}
+                </p>
+            )}
+        </div>
+    </Link>
+);
 
 export default Sidebar;

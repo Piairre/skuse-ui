@@ -89,6 +89,7 @@ const resolveOpenAPIDocument = (document: OpenAPIInputDocument): UnifiedOpenAPI 
     const copy = JSON.parse(JSON.stringify(document)) as Record<string, unknown>;
     if (copy['paths']) copy['paths'] = resolveReferences(copy['paths'], document);
     if (copy['components']) copy['components'] = resolveReferences(copy['components'], document);
+    if (copy['webhooks']) copy['webhooks'] = resolveReferences(copy['webhooks'], document);
     return copy as unknown as UnifiedOpenAPI;
 };
 
@@ -309,6 +310,36 @@ function findOperationByOperationIdAndTag(
     return tagEndpoints.find(endpoint => getOperationId(endpoint) === operationId) || null;
 }
 
+function groupWebhooksByName(webhooks: PathsObject): TaggedOperationsMap {
+    const map: TaggedOperationsMap = {};
+
+    Object.entries(webhooks).forEach(([name, pathItem]) => {
+        if (!pathItem) return;
+        Object.entries(pathItem).forEach(([method, operation]) => {
+            if (!isValidHttpMethod(method)) return;
+            const op = operation as OperationObject;
+            const enhanced: EnhancedOperationObject = {
+                ...op,
+                path: name,
+                method: method.toUpperCase() as HttpMethod,
+            };
+            if (!map[name]) map[name] = [];
+            map[name].push(enhanced);
+        });
+    });
+
+    return map;
+}
+
+function findWebhookOperation(
+    webhooks: PathsObject,
+    webhookName: string,
+    operationId: string
+): EnhancedOperationObject | null {
+    const grouped = groupWebhooksByName(webhooks);
+    return grouped[webhookName]?.find(op => getOperationId(op) === operationId) ?? null;
+}
+
 function getOperationId(operation: EnhancedOperationObject) {
     // Fallback if no operationId is provided
     if (!operation.operationId) {
@@ -386,7 +417,9 @@ const isEmptySchema = (schema: SchemaObject): boolean => {
 export {
     resolveOpenAPIDocument,
     groupEndpointsByTags,
+    groupWebhooksByName,
     findOperationByOperationIdAndTag,
+    findWebhookOperation,
     getBadgeColor,
     isValidHttpMethod,
     isNullableSchema,

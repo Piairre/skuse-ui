@@ -96,6 +96,7 @@ export interface UnifiedOpenAPI {
         description?: string;
         url: string;
     };
+    webhooks?: PathsObject;
 }
 
 export interface OperationObject {
