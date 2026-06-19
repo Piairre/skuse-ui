@@ -405,6 +405,7 @@
     "schemas": {
       "Book": {
         "type": "object",
+        "title": "Book",
         "description": "Represents a book in the library system",
         "required": ["id", "title", "author"],
         "properties": {
@@ -413,6 +414,7 @@
           "author": { "type": "string", "description": "Author name" },
           "genre": {
             "type": "string",
+            "title": "BookGenre",
             "enum": ["fiction", "nonfiction", "history", "science"],
             "description": "Book genre"
           },
@@ -510,6 +512,7 @@
       },
       "StrictId": {
         "type": "object",
+        "title": "StrictIdentifier",
         "description": "An identifier that must not be a negative number",
         "properties": {
           "id": {

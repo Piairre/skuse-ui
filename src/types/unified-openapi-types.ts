@@ -201,6 +201,8 @@ export interface SchemaObject {
     const?: any; // OpenAPI 3.1
     contentMediaType?: string; // OpenAPI 3.1
     contentEncoding?: string; // OpenAPI 3.1
+    patternProperties?: { [pattern: string]: SchemaObject }; // OpenAPI 3.1
+    propertyNames?: SchemaObject; // OpenAPI 3.1
     $schema?: string; // OpenAPI 3.1
 }
 

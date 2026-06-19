@@ -47,13 +47,18 @@ const DEPTH_STYLES = [
 
 const getDepthStyle = (depth: number) => DEPTH_STYLES[depth % DEPTH_STYLES.length]!;
 
+const MAX_DEPTH = 8;
+
 const isExpandable = (schema: SchemaObject): boolean =>
     !!schema.properties ||
     schema.type === 'object' ||
     (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) ||
     (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) ||
     (Array.isArray(schema.allOf) && schema.allOf.length > 0) ||
-    !!schema.not;
+    !!schema.not ||
+    (!!schema.additionalProperties && typeof schema.additionalProperties === 'object') ||
+    !!schema.patternProperties ||
+    !!schema.propertyNames;
 
 const mergeAllOf = (schemas: SchemaObject[]): { properties: Record<string, SchemaObject>; required: string[] } => {
     const properties: Record<string, SchemaObject> = {};
@@ -76,7 +81,16 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
     const depthStyle = getDepthStyle(depth);
 
     const isArrayType = s.type === 'array' || (!s.type && !!s.items);
-    const isObjectType = !!(s.properties || s.additionalProperties);
+    const isObjectType = !!(s.properties || s.additionalProperties || s.patternProperties);
+
+    if (depth >= MAX_DEPTH) {
+        return (
+            <div className="flex items-center gap-2 p-2 text-xs text-muted-foreground italic">
+                <div className="w-4 shrink-0" />
+                Max depth reached
+            </div>
+        );
+    }
 
     const hasChildren =
         isObjectType ||
@@ -84,7 +98,10 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         (Array.isArray(s.oneOf) && s.oneOf.length > 0) ||
         (Array.isArray(s.anyOf) && s.anyOf.length > 0) ||
         (Array.isArray(s.allOf) && s.allOf.length > 0 && s.allOf.some(sub => !!sub.properties)) ||
-        !!s.not;
+        !!s.not ||
+        (!!s.additionalProperties && typeof s.additionalProperties === 'object') ||
+        !!s.patternProperties ||
+        !!s.propertyNames;
 
     const [isOpen, setIsOpen] = React.useState(isRoot && hasChildren);
 
@@ -206,14 +223,37 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         const nextDepth = depth + 1;
 
         if (isObjectType) {
+            const sortedEntries = Object.entries(s.properties || {}).sort(([a], [b]) => {
+                const aReq = s.required?.includes(a) ? 0 : 1;
+                const bReq = s.required?.includes(b) ? 0 : 1;
+                return aReq - bReq;
+            });
             parts.push(
                 <div key="props" className={depth === 0 ? 'pl-2' : 'pl-4'}>
-                    {Object.entries(s.properties || {}).map(([propName, propSchema]) =>
+                    {sortedEntries.map(([propName, propSchema]) =>
                         childWrapper(propName,
                             <SchemaProperty
                                 name={propName}
                                 schema={propSchema}
                                 required={s.required?.includes(propName)}
+                                depth={nextDepth}
+                            />
+                        )
+                    )}
+                    {s.additionalProperties && typeof s.additionalProperties === 'object' && (
+                        childWrapper('[key: string]',
+                            <SchemaProperty
+                                name="[key: string]"
+                                schema={s.additionalProperties}
+                                depth={nextDepth}
+                            />
+                        )
+                    )}
+                    {s.patternProperties && Object.entries(s.patternProperties).map(([pattern, propSchema]) =>
+                        childWrapper(`pattern:${pattern}`,
+                            <SchemaProperty
+                                name={`[/${pattern}/]`}
+                                schema={propSchema}
                                 depth={nextDepth}
                             />
                         )
@@ -255,6 +295,15 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                             </div>
                         ))}
                     </div>
+                </div>
+            );
+        }
+
+        if (s.propertyNames) {
+            parts.push(
+                <div key="propertyNames" className="pl-4 mt-1">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Property names:</p>
+                    <SchemaProperty schema={s.propertyNames} depth={nextDepth} />
                 </div>
             );
         }
@@ -306,6 +355,9 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                 )}
                 <SchemaBadges schema={s} />
             </div>
+            {s.title && s.title !== name && (
+                <span className="text-xs text-muted-foreground italic">{s.title}</span>
+            )}
             {s.description && (
                 <div onClick={e => e.stopPropagation()}>
                     <FormattedMarkdown
