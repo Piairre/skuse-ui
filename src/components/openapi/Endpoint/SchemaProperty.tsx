@@ -52,7 +52,8 @@ const isExpandable = (schema: SchemaObject): boolean =>
     schema.type === 'object' ||
     (Array.isArray(schema.oneOf) && schema.oneOf.length > 0) ||
     (Array.isArray(schema.anyOf) && schema.anyOf.length > 0) ||
-    (Array.isArray(schema.allOf) && schema.allOf.length > 0);
+    (Array.isArray(schema.allOf) && schema.allOf.length > 0) ||
+    !!schema.not;
 
 const mergeAllOf = (schemas: SchemaObject[]): { properties: Record<string, SchemaObject>; required: string[] } => {
     const properties: Record<string, SchemaObject> = {};
@@ -82,7 +83,8 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         (isArrayType && !!s.items && isExpandable(s.items)) ||
         (Array.isArray(s.oneOf) && s.oneOf.length > 0) ||
         (Array.isArray(s.anyOf) && s.anyOf.length > 0) ||
-        (Array.isArray(s.allOf) && s.allOf.length > 0 && s.allOf.some(sub => !!sub.properties));
+        (Array.isArray(s.allOf) && s.allOf.length > 0 && s.allOf.some(sub => !!sub.properties)) ||
+        !!s.not;
 
     const [isOpen, setIsOpen] = React.useState(isRoot && hasChildren);
 
@@ -107,6 +109,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         }
         if (Array.isArray(s.oneOf) && s.oneOf.length > 0) return { count: s.oneOf.length, label: 'variants' };
         if (Array.isArray(s.anyOf) && s.anyOf.length > 0) return { count: s.anyOf.length, label: 'variants' };
+        if (s.not) return { count: 1, label: 'constraint' };
         if (Array.isArray(s.allOf) && s.allOf.length > 0) {
             const { properties } = mergeAllOf(s.allOf);
             const count = Object.keys(properties).length;
@@ -239,6 +242,32 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
             );
         }
 
+        if (s.discriminator?.mapping && Object.keys(s.discriminator.mapping).length > 0) {
+            parts.push(
+                <div key="discriminator-mapping" className="pl-4 pt-1 pb-0.5">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Mapping</p>
+                    <div className="flex flex-col gap-0.5 px-2">
+                        {Object.entries(s.discriminator.mapping).map(([value, ref]) => (
+                            <div key={value} className="flex items-center gap-1.5 text-xs">
+                                <Badge variant="outline" className="font-mono text-xs">{value}</Badge>
+                                <span className="text-muted-foreground">→</span>
+                                <span className="font-mono text-xs text-muted-foreground">{ref.split('/').pop()}</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            );
+        }
+
+        if (s.not) {
+            parts.push(
+                <div key="not" className="pl-4 mt-1">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Not:</p>
+                    <SchemaProperty schema={s.not} depth={nextDepth} />
+                </div>
+            );
+        }
+
         if (Array.isArray(s.oneOf) && s.oneOf.length > 0)
             parts.push(renderCompositeGroup('oneOf', 'One of:', s.oneOf, 'Option'));
         if (Array.isArray(s.anyOf) && s.anyOf.length > 0)
@@ -283,6 +312,14 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                         className="!text-xs !text-gray-600 dark:!text-gray-400"
                         markdown={s.description}
                     />
+                </div>
+            )}
+            {s.discriminator && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="text-xs text-muted-foreground">discriminator:</span>
+                    <Badge variant="outline" className="text-xs font-mono bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300">
+                        {s.discriminator.propertyName}
+                    </Badge>
                 </div>
             )}
             {s.enum && s.enum.length > 0 && (

@@ -55,7 +55,9 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
     const effectiveSummary = operation.summary ?? operation.pathSummary;
 
     const hasDescription = !!(effectiveDescription || operation.deprecated || operation.externalDocs);
-    const hasLeft = hasDescription || parameters.length > 0 || !!requestBody;
+    const hasParams = parameters.length > 0 || !!requestBody || !!(operation.callbacks && Object.keys(operation.callbacks).length > 0);
+    const hasLeft = hasDescription || hasParams;
+    const onlyDescription = hasDescription && !hasParams;
 
     return (
         <Card className="w-full rounded-none border-x-0 border-t-0 md:rounded-lg md:border">
@@ -83,7 +85,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
             <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 p-4">
                 {/* Left — Description, Parameters, Request Body */}
                 {hasLeft && (
-                    <div className="lg:col-span-3 space-y-4">
+                    <div className={`${onlyDescription ? 'lg:col-span-5' : 'lg:col-span-3'} space-y-4`}>
                         {hasDescription && (
                             <section className="space-y-3 px-1">
                                 {operation.deprecated && (
@@ -133,7 +135,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                 )}
 
                 {/* Right — Code Examples + Responses */}
-                <div className={`${hasLeft ? 'lg:col-span-2' : 'lg:col-span-5'} space-y-4`}>
+                <div className={`${!hasLeft || onlyDescription ? 'lg:col-span-5' : 'lg:col-span-2'} space-y-4`}>
                     <SectionCard>
                         <CodeExamples
                             method={operation.method}

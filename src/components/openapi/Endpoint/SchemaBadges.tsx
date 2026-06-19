@@ -62,16 +62,40 @@ const SchemaBadges: React.FC<SchemaBadgesProps> = ({ schema }) => {
                 <Badge variant="outline" className="text-xs font-mono text-muted-foreground">max: {s.maxLength}</Badge>
             )}
             {s.minimum !== undefined && (
-                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">≥ {s.minimum}</Badge>
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
+                    {s.exclusiveMinimum === true ? '>' : '≥'} {s.minimum}
+                </Badge>
+            )}
+            {typeof s.exclusiveMinimum === 'number' && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">&gt; {s.exclusiveMinimum}</Badge>
             )}
             {s.maximum !== undefined && (
-                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">≤ {s.maximum}</Badge>
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
+                    {s.exclusiveMaximum === true ? '<' : '≤'} {s.maximum}
+                </Badge>
+            )}
+            {typeof s.exclusiveMaximum === 'number' && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">&lt; {s.exclusiveMaximum}</Badge>
+            )}
+            {s.multipleOf !== undefined && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">×{s.multipleOf}</Badge>
             )}
             {s.minItems !== undefined && (
                 <Badge variant="outline" className="text-xs font-mono text-muted-foreground">minItems: {s.minItems}</Badge>
             )}
             {s.maxItems !== undefined && (
                 <Badge variant="outline" className="text-xs font-mono text-muted-foreground">maxItems: {s.maxItems}</Badge>
+            )}
+            {s.minProperties !== undefined && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">minProps: {s.minProperties}</Badge>
+            )}
+            {s.maxProperties !== undefined && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">maxProps: {s.maxProperties}</Badge>
+            )}
+            {s.const !== undefined && (
+                <Badge variant="outline" className="text-xs font-mono bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                    const: {JSON.stringify(s.const)}
+                </Badge>
             )}
             {s.uniqueItems && (
                 <Badge variant="outline" className="text-xs text-muted-foreground">unique</Badge>
@@ -80,6 +104,12 @@ const SchemaBadges: React.FC<SchemaBadgesProps> = ({ schema }) => {
                 <Badge variant="outline" className="text-xs font-mono text-muted-foreground max-w-[200px] truncate" title={s.pattern}>
                     /{s.pattern}/
                 </Badge>
+            )}
+            {s.contentMediaType && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">{s.contentMediaType}</Badge>
+            )}
+            {s.contentEncoding && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">encoding: {s.contentEncoding}</Badge>
             )}
             {s.externalDocs?.url && <ExternalDocsLink url={s.externalDocs.url} />}
         </>

@@ -200,6 +200,7 @@ export interface SchemaObject {
     deprecated?: boolean;
     const?: any; // OpenAPI 3.1
     contentMediaType?: string; // OpenAPI 3.1
+    contentEncoding?: string; // OpenAPI 3.1
     $schema?: string; // OpenAPI 3.1
 }
 

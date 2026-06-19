@@ -19,6 +19,10 @@
     {
       "name": "authors",
       "description": "Author management endpoints"
+    },
+    {
+      "name": "media",
+      "description": "Polymorphic media items — tests discriminator rendering"
     }
   ],
   "servers": [
@@ -247,6 +251,103 @@
           }
         }
       }
+    },
+    "/books/{id}/cover": {
+      "put": {
+        "tags": ["books"],
+        "operationId": "uploadBookCover",
+        "summary": "Upload a book cover image",
+        "description": "Tests `contentMediaType` and `contentEncoding` rendering (OAS 3.1).",
+        "parameters": [
+          { "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["filename", "data"],
+                "properties": {
+                  "filename": { "type": "string", "description": "Original filename" },
+                  "data": {
+                    "type": "string",
+                    "contentMediaType": "image/png",
+                    "contentEncoding": "base64",
+                    "description": "Base64-encoded PNG image"
+                  },
+                  "thumbnail": {
+                    "type": "string",
+                    "contentMediaType": "image/jpeg",
+                    "contentEncoding": "base64",
+                    "description": "Optional base64-encoded JPEG thumbnail"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Cover uploaded" }
+        }
+      }
+    },
+    "/validate": {
+      "post": {
+        "tags": ["media"],
+        "operationId": "validateId",
+        "summary": "Validate a strict identifier",
+        "description": "Tests `not` schema rendering — the request body uses `StrictId` which contains `not` constraints.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StrictId" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Valid" },
+          "422": { "description": "Validation error" }
+        }
+      }
+    },
+    "/media": {
+      "post": {
+        "tags": ["media"],
+        "operationId": "createMedia",
+        "summary": "Add a media item",
+        "description": "Creates a media item. The `mediaType` field acts as a discriminator to determine which schema variant to use.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Media" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Media item created" }
+        }
+      },
+      "get": {
+        "tags": ["media"],
+        "operationId": "listMedia",
+        "summary": "List media items",
+        "responses": {
+          "200": {
+            "description": "A list of media items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Media" }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "webhooks": {
@@ -362,6 +463,71 @@
             "items": { "$ref": "#/components/schemas/Author" }
           },
           "total": { "type": "integer" }
+        }
+      },
+      "Media": {
+        "description": "A polymorphic media item. Use `mediaType` to select the correct variant.",
+        "oneOf": [
+          { "$ref": "#/components/schemas/AudioBook" },
+          { "$ref": "#/components/schemas/EBook" },
+          { "$ref": "#/components/schemas/PrintBook" }
+        ],
+        "discriminator": {
+          "propertyName": "mediaType",
+          "mapping": {
+            "audio": "#/components/schemas/AudioBook",
+            "ebook": "#/components/schemas/EBook",
+            "print": "#/components/schemas/PrintBook"
+          }
+        }
+      },
+      "AudioBook": {
+        "type": "object",
+        "description": "An audio book with a narrator and duration",
+        "required": ["mediaType", "title", "narrator", "durationMinutes"],
+        "properties": {
+          "mediaType": { "type": "string", "enum": ["audio"] },
+          "title": { "type": "string" },
+          "narrator": { "type": "string", "description": "Name of the narrator" },
+          "durationMinutes": { "type": "integer", "description": "Total duration in minutes" }
+        }
+      },
+      "EBook": {
+        "type": "object",
+        "description": "A digital e-book",
+        "required": ["mediaType", "title", "format"],
+        "properties": {
+          "mediaType": { "type": "string", "enum": ["ebook"] },
+          "title": { "type": "string" },
+          "format": { "type": "string", "enum": ["epub", "pdf", "mobi"], "description": "File format" },
+          "fileSizeKb": { "type": "integer", "description": "File size in kilobytes" }
+        }
+      },
+      "NonEmptyString": {
+        "type": "string",
+        "description": "A string that must not be empty or null",
+        "not": { "type": "string", "maxLength": 0 }
+      },
+      "StrictId": {
+        "type": "object",
+        "description": "An identifier that must not be a negative number",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "not": { "minimum": -1, "maximum": -1 }
+          },
+          "label": { "$ref": "#/components/schemas/NonEmptyString" }
+        }
+      },
+      "PrintBook": {
+        "type": "object",
+        "description": "A physical print book",
+        "required": ["mediaType", "title", "isbn"],
+        "properties": {
+          "mediaType": { "type": "string", "enum": ["print"] },
+          "title": { "type": "string" },
+          "isbn": { "type": "string", "description": "ISBN-13 identifier" },
+          "pageCount": { "type": "integer" }
         }
       }
     }
