@@ -2,11 +2,11 @@ import React from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
-import {ResponseObject, SchemaObject, HeaderObject} from "@/types/unified-openapi-types";
+import {ResponseObject, SchemaObject, HeaderObject, LinkObject} from "@/types/unified-openapi-types";
 import SchemaViewer from './SchemaViewer';
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
-import {renderSchemaType, isEmptySchema} from "@/utils/openapi";
+import {renderSchemaType, isEmptySchema, groupEndpointsByTags, getOperationId} from "@/utils/openapi";
 import {
     Select,
     SelectContent,
@@ -15,6 +15,8 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
+import { useNavigate } from '@tanstack/react-router';
+import { ArrowRight } from 'lucide-react';
 
 interface ResponseViewerProps {
     responses: { [code: string]: ResponseObject }
@@ -101,6 +103,47 @@ const HeaderViewer: React.FC<HeaderViewerProps> = ({headers}) => {
     );
 };
 
+const ResponseLinks: React.FC<{ links: Record<string, LinkObject> }> = ({ links }) => {
+    const { spec } = useOpenAPIContext();
+    const navigate = useNavigate();
+
+    const findRoute = (operationId: string) => {
+        const grouped = groupEndpointsByTags(spec.paths);
+        for (const [tag, ops] of Object.entries(grouped)) {
+            const op = ops.find(o => o.operationId === operationId);
+            if (op) return { tag, operationIdentifier: getOperationId(op) };
+        }
+        return null;
+    };
+
+    return (
+        <div className="space-y-2 pt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">See also</p>
+            <div className="flex flex-wrap gap-2">
+                {Object.entries(links).map(([name, link]) => {
+                    const route = link.operationId ? findRoute(link.operationId) : null;
+                    return (
+                        <button
+                            key={name}
+                            title={link.description}
+                            onClick={() => route && navigate({ to: '/$tag/$operationIdentifier', params: route })}
+                            className={cn(
+                                "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors",
+                                route
+                                    ? "border-primary/50 text-primary hover:bg-primary/10 cursor-pointer"
+                                    : "border-muted-foreground/30 text-muted-foreground cursor-default"
+                            )}
+                        >
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                            {name}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
+
 const ResponseContent: React.FC<{ response: ResponseObject }> = ({ response }) => {
     const { preferredContentType, setPreferredContentType } = useOpenAPIContext();
     const contentTypes = response.content ? Object.keys(response.content) : [];
@@ -131,6 +174,10 @@ const ResponseContent: React.FC<{ response: ResponseObject }> = ({ response }) =
             )}
 
             {response.headers && <HeaderViewer headers={response.headers} />}
+
+            {response.links && Object.keys(response.links).length > 0 && (
+                <ResponseLinks links={response.links} />
+            )}
 
             {contentTypes.length > 0 ? (
                 <div className="space-y-3">

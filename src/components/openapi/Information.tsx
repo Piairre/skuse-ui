@@ -28,6 +28,9 @@ const Information: React.FC = () => {
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-6">
                     <div>
                         <h1 className="text-2xl font-bold">{spec.info.title}</h1>
+                        {spec.info.summary && (
+                            <p className="text-sm text-muted-foreground mt-1">{spec.info.summary}</p>
+                        )}
                         <div className="flex flex-wrap items-center gap-2 mt-2">
                             <Badge variant="outline" className="font-mono">v{spec.info.version}</Badge>
                             <Badge variant="outline" className="border-green-500 text-green-600 dark:text-green-400">

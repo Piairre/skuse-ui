@@ -282,7 +282,9 @@ function groupEndpointsByTags(paths: PathsObject): TaggedOperationsMap {
             const enhancedOperation: EnhancedOperationObject = {
                 ...mergedOperation,
                 path,
-                method: method.toUpperCase() as HttpMethod
+                method: method.toUpperCase() as HttpMethod,
+                pathSummary: pathItem.summary,
+                pathDescription: pathItem.description,
             };
 
             tags.forEach(tag => {

@@ -389,6 +389,8 @@ export type AuthCredential =
 export interface EnhancedOperationObject extends OperationObject {
     path: string;
     method: HttpMethod;
+    pathSummary?: string;
+    pathDescription?: string;
 }
 
 export type TaggedOperationsMap = Record<string, EnhancedOperationObject[]>;

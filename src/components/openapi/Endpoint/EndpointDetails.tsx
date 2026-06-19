@@ -11,6 +11,7 @@ import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
 import RequestBodyViewer from "@/components/openapi/Endpoint/RequestBodyViewer";
+import CallbackViewer from "@/components/openapi/Endpoint/CallbackViewer";
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 
 interface EndpointContentProps {
@@ -50,7 +51,10 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
     const effectiveSecurity = operation.security !== undefined ? operation.security : (spec.security ?? []);
     const requiresAuth = effectiveSecurity.length > 0;
 
-    const hasDescription = !!(operation.description || operation.deprecated || operation.externalDocs);
+    const effectiveDescription = operation.description ?? operation.pathDescription;
+    const effectiveSummary = operation.summary ?? operation.pathSummary;
+
+    const hasDescription = !!(effectiveDescription || operation.deprecated || operation.externalDocs);
     const hasLeft = hasDescription || parameters.length > 0 || !!requestBody;
 
     return (
@@ -71,8 +75,8 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                         Authentication Required
                     </Badge>
                 )}
-                {operation.summary && (
-                    <p className="w-full text-sm text-muted-foreground -mt-1">{operation.summary}</p>
+                {effectiveSummary && (
+                    <p className="w-full text-sm text-muted-foreground -mt-1">{effectiveSummary}</p>
                 )}
             </div>
 
@@ -89,9 +93,9 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                                         </AlertDescription>
                                     </Alert>
                                 )}
-                                {operation.description && (
+                                {effectiveDescription && (
                                     <div className="prose prose-slate dark:prose-invert max-w-none">
-                                        <FormattedMarkdown markdown={operation.description} maxLength={1000} />
+                                        <FormattedMarkdown markdown={effectiveDescription} maxLength={1000} />
                                     </div>
                                 )}
                                 {operation.externalDocs && (
@@ -119,6 +123,12 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                                 <RequestBodyViewer requestBody={requestBody} />
                             </SectionCard>
                         )}
+
+                        {operation.callbacks && Object.keys(operation.callbacks).length > 0 && (
+                            <SectionCard title="Callbacks">
+                                <CallbackViewer callbacks={operation.callbacks} />
+                            </SectionCard>
+                        )}
                     </div>
                 )}
 
@@ -140,6 +150,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                     </SectionCard>
                 </div>
             </div>
+
         </Card>
     );
 };

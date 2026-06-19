@@ -2,6 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Skuse Test API",
+    "summary": "A test spec covering OAS 3.1 features",
     "version": "1.0.0",
     "description": "Local test spec to validate Skuse features — schema.examples, global security, tag descriptions, models, etc."
   },
@@ -61,6 +62,17 @@
                   "$ref": "#/components/schemas/BookList"
                 }
               }
+            },
+            "links": {
+              "GetBookById": {
+                "operationId": "getBook",
+                "parameters": { "id": "$response.body#/data/0/id" },
+                "description": "Use the id of the first book to fetch its details"
+              },
+              "ListAuthors": {
+                "operationId": "getAuthors",
+                "description": "Browse authors of the returned books"
+              }
             }
           }
         }
@@ -70,6 +82,33 @@
         "operationId": "createBook",
         "summary": "Create a book",
         "security": [{ "bearerAuth": [] }],
+        "callbacks": {
+          "onBookIndexed": {
+            "{$request.body#/callbackUrl}": {
+              "post": {
+                "summary": "Book indexed notification",
+                "description": "Sent when the newly created book has been indexed and is searchable.",
+                "requestBody": {
+                  "required": true,
+                  "content": {
+                    "application/json": {
+                      "schema": {
+                        "type": "object",
+                        "properties": {
+                          "bookId": { "type": "integer", "description": "ID of the indexed book" },
+                          "indexedAt": { "type": "string", "format": "date-time" }
+                        }
+                      }
+                    }
+                  }
+                },
+                "responses": {
+                  "200": { "description": "Callback received" }
+                }
+              }
+            }
+          }
+        },
         "requestBody": {
           "required": true,
           "content": {
@@ -103,6 +142,8 @@
       }
     },
     "/books/{id}": {
+      "summary": "Operations on a specific book",
+      "description": "All endpoints under this path operate on a single book identified by its numeric `id`.",
       "get": {
         "tags": ["books"],
         "operationId": "getBook",
