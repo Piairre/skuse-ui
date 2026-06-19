@@ -97,6 +97,7 @@ export interface UnifiedOpenAPI {
         url: string;
     };
     webhooks?: PathsObject;
+    $defs?: Record<string, SchemaObject>; // OpenAPI 3.1
 }
 
 export interface OperationObject {
@@ -203,6 +204,16 @@ export interface SchemaObject {
     contentEncoding?: string; // OpenAPI 3.1
     patternProperties?: { [pattern: string]: SchemaObject }; // OpenAPI 3.1
     propertyNames?: SchemaObject; // OpenAPI 3.1
+    prefixItems?: SchemaObject[]; // OpenAPI 3.1 — tuple positional items
+    if?: SchemaObject; // OpenAPI 3.1 — conditional schema
+    then?: SchemaObject; // OpenAPI 3.1 — conditional schema
+    else?: SchemaObject; // OpenAPI 3.1 — conditional schema
+    contains?: SchemaObject; // OpenAPI 3.1 — array must contain at least one item matching this
+    minContains?: number; // OpenAPI 3.1
+    maxContains?: number; // OpenAPI 3.1
+    unevaluatedProperties?: boolean | SchemaObject; // OpenAPI 3.1
+    unevaluatedItems?: boolean | SchemaObject; // OpenAPI 3.1
+    $defs?: Record<string, SchemaObject>; // OpenAPI 3.1 — inline schema definitions
     $schema?: string; // OpenAPI 3.1
 }
 

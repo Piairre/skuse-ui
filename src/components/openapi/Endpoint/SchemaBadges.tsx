@@ -15,8 +15,8 @@ const getTypeColorClass = (typeStr: string): string => {
     if (t.startsWith('string')) return 'border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/40';
     if (t.startsWith('integer') || t.startsWith('number')) return 'border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/40';
     if (t.startsWith('boolean')) return 'border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40';
-    if (t.startsWith('array')) return 'border-cyan-200 dark:border-cyan-800 text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40';
-    if (t.startsWith('oneof') || t.startsWith('anyof') || t.startsWith('allof')) return 'border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40';
+    if (t.startsWith('array') || t.startsWith('[')) return 'border-cyan-200 dark:border-cyan-800 text-cyan-700 dark:text-cyan-300 bg-cyan-50 dark:bg-cyan-950/40';
+    if (t.startsWith('oneof') || t.startsWith('anyof') || t.startsWith('allof') || t === 'conditional') return 'border-indigo-200 dark:border-indigo-800 text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/40';
     // object or named model title
     return 'border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40';
 };
@@ -110,6 +110,21 @@ const SchemaBadges: React.FC<SchemaBadgesProps> = ({ schema }) => {
             )}
             {s.contentEncoding && (
                 <Badge variant="outline" className="text-xs font-mono text-muted-foreground">encoding: {s.contentEncoding}</Badge>
+            )}
+            {s.minContains !== undefined && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">minContains: {s.minContains}</Badge>
+            )}
+            {s.maxContains !== undefined && (
+                <Badge variant="outline" className="text-xs font-mono text-muted-foreground">maxContains: {s.maxContains}</Badge>
+            )}
+            {s.additionalProperties === false && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">no additional props</Badge>
+            )}
+            {s.unevaluatedProperties === false && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">no unevaluated props</Badge>
+            )}
+            {s.unevaluatedItems === false && (
+                <Badge variant="outline" className="text-xs text-muted-foreground">no unevaluated items</Badge>
             )}
             {s.externalDocs?.url && <ExternalDocsLink url={s.externalDocs.url} />}
         </>

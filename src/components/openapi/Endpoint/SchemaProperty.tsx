@@ -58,7 +58,12 @@ const isExpandable = (schema: SchemaObject): boolean =>
     !!schema.not ||
     (!!schema.additionalProperties && typeof schema.additionalProperties === 'object') ||
     !!schema.patternProperties ||
-    !!schema.propertyNames;
+    !!schema.propertyNames ||
+    (Array.isArray(schema.prefixItems) && schema.prefixItems.length > 0) ||
+    !!schema.if ||
+    !!schema.contains ||
+    (typeof schema.unevaluatedProperties === 'object' && !!schema.unevaluatedProperties) ||
+    (typeof schema.unevaluatedItems === 'object' && !!schema.unevaluatedItems);
 
 const mergeAllOf = (schemas: SchemaObject[]): { properties: Record<string, SchemaObject>; required: string[] } => {
     const properties: Record<string, SchemaObject> = {};
@@ -81,7 +86,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
     const depthStyle = getDepthStyle(depth);
 
     const isArrayType = s.type === 'array' || (!s.type && !!s.items);
-    const isObjectType = !!(s.properties || s.additionalProperties || s.patternProperties);
+    const isObjectType = !!(s.properties || (s.additionalProperties && typeof s.additionalProperties === 'object') || s.patternProperties);
 
     if (depth >= MAX_DEPTH) {
         return (
@@ -101,7 +106,12 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
         !!s.not ||
         (!!s.additionalProperties && typeof s.additionalProperties === 'object') ||
         !!s.patternProperties ||
-        !!s.propertyNames;
+        !!s.propertyNames ||
+        (Array.isArray(s.prefixItems) && s.prefixItems.length > 0) ||
+        !!s.if ||
+        !!s.contains ||
+        (typeof s.unevaluatedProperties === 'object' && !!s.unevaluatedProperties) ||
+        (typeof s.unevaluatedItems === 'object' && !!s.unevaluatedItems);
 
     const [isOpen, setIsOpen] = React.useState(isRoot && hasChildren);
 
@@ -117,7 +127,11 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
     const childCount = React.useMemo((): { count: number; label: string } | null => {
         if (!hasChildren) return null;
         if (isObjectType) {
-            const count = Object.keys(s.properties || {}).length;
+            const propCount = Object.keys(s.properties || {}).length;
+            const additionalCount = typeof s.additionalProperties === 'object' && s.additionalProperties ? 1 : 0;
+            const patternCount = s.patternProperties ? Object.keys(s.patternProperties).length : 0;
+            const unevaluatedCount = typeof s.unevaluatedProperties === 'object' && s.unevaluatedProperties ? 1 : 0;
+            const count = propCount + additionalCount + patternCount + unevaluatedCount;
             return count > 0 ? { count, label: count === 1 ? 'property' : 'properties' } : null;
         }
         if (isArrayType && s.items?.properties) {
@@ -132,6 +146,8 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
             const count = Object.keys(properties).length;
             return count > 0 ? { count, label: count === 1 ? 'property' : 'properties' } : null;
         }
+        if (Array.isArray(s.prefixItems) && s.prefixItems.length > 0) return { count: s.prefixItems.length, label: s.prefixItems.length === 1 ? 'item' : 'items' };
+        if (s.if) return { count: 1, label: 'conditional' };
         return null;
     }, [hasChildren, isObjectType, isArrayType, s]);
 
@@ -142,14 +158,18 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
     );
 
     const renderCompositeOption = (option: SchemaObject, index: number, label: string) => {
-        const itemSchema = option.type === 'array' && option.items ? option.items : option;
-        const canExpand = !!itemSchema.properties && Object.keys(itemSchema.properties).length > 0;
+        const rawSchema = option.type === 'array' && option.items ? option.items : option;
+        const itemSchema = flattenSchema(rawSchema);
+        const canExpand = isExpandable(itemSchema);
         const nextDepth = depth + 1;
         const nextStyle = getDepthStyle(nextDepth);
 
         const header = (
             <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className="text-xs">{label} {index + 1}</Badge>
+                {option.title && (
+                    <span className="font-mono text-xs font-medium text-gray-900 dark:text-gray-100">{option.title}</span>
+                )}
                 <Badge variant="outline" className="text-xs border-slate-200 dark:border-slate-700">
                     {renderSchemaType(option)}
                 </Badge>
@@ -180,6 +200,12 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
             );
         }
 
+        const sortedEntries = Object.entries(itemSchema.properties ?? {}).sort(([a], [b]) => {
+            const aReq = itemSchema.required?.includes(a) ? 0 : 1;
+            const bReq = itemSchema.required?.includes(b) ? 0 : 1;
+            return aReq - bReq;
+        });
+
         return (
             <div key={index}>
                 <Collapsible>
@@ -195,7 +221,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                     </CollapsibleTrigger>
                     <CollapsibleContent className="mt-1 pl-4">
                         <div className={cn('border-l-2 pl-4', nextStyle.border)}>
-                            {Object.entries(itemSchema.properties ?? {}).map(([propName, propSchema]) => (
+                            {sortedEntries.map(([propName, propSchema]) => (
                                 <SchemaProperty
                                     key={propName}
                                     name={propName}
@@ -204,6 +230,26 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                                     depth={nextDepth}
                                 />
                             ))}
+                            {typeof itemSchema.additionalProperties === 'object' && itemSchema.additionalProperties && (
+                                <SchemaProperty
+                                    name="[key: string]"
+                                    schema={itemSchema.additionalProperties}
+                                    depth={nextDepth}
+                                />
+                            )}
+                            {itemSchema.patternProperties && Object.entries(itemSchema.patternProperties).map(([pattern, propSchema]) => (
+                                <SchemaProperty
+                                    key={`pattern:${pattern}`}
+                                    name={`[/${pattern}/]`}
+                                    schema={propSchema}
+                                    depth={nextDepth}
+                                />
+                            ))}
+                            {!itemSchema.properties &&
+                                !itemSchema.additionalProperties &&
+                                !itemSchema.patternProperties && (
+                                <SchemaProperty schema={itemSchema} depth={nextDepth} />
+                            )}
                         </div>
                     </CollapsibleContent>
                 </Collapsible>
@@ -317,6 +363,84 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
             );
         }
 
+        if (s.contains) {
+            parts.push(
+                <div key="contains" className="pl-4 mt-1">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Contains:</p>
+                    <SchemaProperty schema={s.contains} depth={nextDepth} />
+                </div>
+            );
+        }
+
+        if (typeof s.unevaluatedProperties === 'object' && s.unevaluatedProperties) {
+            parts.push(
+                <div key="unevaluatedProperties" className="pl-4 mt-1">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Unevaluated properties:</p>
+                    <SchemaProperty name="[unevaluated: string]" schema={s.unevaluatedProperties} depth={nextDepth} />
+                </div>
+            );
+        }
+
+        if (typeof s.unevaluatedItems === 'object' && s.unevaluatedItems) {
+            parts.push(
+                <div key="unevaluatedItems" className="pl-4 mt-1">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Unevaluated items:</p>
+                    <SchemaProperty schema={s.unevaluatedItems} depth={nextDepth} />
+                </div>
+            );
+        }
+
+        if (Array.isArray(s.prefixItems) && s.prefixItems.length > 0) {
+            parts.push(
+                <div key="prefixItems" className="pl-4 mt-1">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Tuple items:</p>
+                    {s.prefixItems.map((itemSchema, i) =>
+                        childWrapper(`prefixItem-${i}`,
+                            <SchemaProperty
+                                key={i}
+                                name={`[${i}]`}
+                                schema={itemSchema}
+                                depth={nextDepth}
+                            />
+                        )
+                    )}
+                    {s.items && (
+                        childWrapper('prefixItems-rest',
+                            <SchemaProperty
+                                name="[...]"
+                                schema={s.items}
+                                depth={nextDepth}
+                            />
+                        )
+                    )}
+                </div>
+            );
+        }
+
+        if (s.if) {
+            parts.push(
+                <div key="if-then-else" className="pl-4 mt-1 space-y-1">
+                    <p className="text-xs text-muted-foreground px-2 pb-1">Conditional:</p>
+                    <div>
+                        <p className="text-xs text-muted-foreground px-2">if</p>
+                        <SchemaProperty schema={s.if} depth={nextDepth} />
+                    </div>
+                    {s.then && (
+                        <div>
+                            <p className="text-xs text-muted-foreground px-2">then</p>
+                            <SchemaProperty schema={s.then} depth={nextDepth} />
+                        </div>
+                    )}
+                    {s.else && (
+                        <div>
+                            <p className="text-xs text-muted-foreground px-2">else</p>
+                            <SchemaProperty schema={s.else} depth={nextDepth} />
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
         if (Array.isArray(s.oneOf) && s.oneOf.length > 0)
             parts.push(renderCompositeGroup('oneOf', 'One of:', s.oneOf, 'Option'));
         if (Array.isArray(s.anyOf) && s.anyOf.length > 0)
@@ -355,7 +479,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                 )}
                 <SchemaBadges schema={s} />
             </div>
-            {s.title && s.title !== name && (
+            {s.title && s.title !== name && !(s.type === 'object' || (!s.type && s.properties)) && (
                 <span className="text-xs text-muted-foreground italic">{s.title}</span>
             )}
             {s.description && (

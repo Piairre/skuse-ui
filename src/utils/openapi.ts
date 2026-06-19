@@ -87,6 +87,7 @@ const resolveReferences = (obj: unknown, document: OpenAPIInputDocument, visited
 
 const resolveOpenAPIDocument = (document: OpenAPIInputDocument): UnifiedOpenAPI => {
     const copy = JSON.parse(JSON.stringify(document)) as Record<string, unknown>;
+    if (copy['$defs']) copy['$defs'] = resolveReferences(copy['$defs'], document);
     if (copy['paths']) copy['paths'] = resolveReferences(copy['paths'], document);
     if (copy['components']) copy['components'] = resolveReferences(copy['components'], document);
     if (copy['webhooks']) copy['webhooks'] = resolveReferences(copy['webhooks'], document);
@@ -98,6 +99,13 @@ const validHttpMethods = new Set<HttpMethod>([
 ]);
 
 // Detects schemas representing `null` — handles both v3.0 ({} placeholder) and v3.1 ({type:'null'})
+const inferTypeFromValue = (value: unknown): string =>
+    value === null ? 'null'
+    : typeof value === 'string' ? 'string'
+    : typeof value === 'number' ? 'number'
+    : typeof value === 'boolean' ? 'boolean'
+    : 'object';
+
 const inferTypeFromEnum = (enumValues: unknown[] | undefined): string | null => {
     const first = enumValues?.[0];
     if (first === undefined) return null;
@@ -110,12 +118,20 @@ const inferTypeFromEnum = (enumValues: unknown[] | undefined): string | null => 
 const isNullableSchema = (schema: SchemaObject): boolean => {
     if (schema.type === 'null') return true;
     if (schema.type === 'array') return false;
+    if (schema.prefixItems || schema.items || schema.contains) return false;
+    if (schema.if || schema.not) return false;
     return !schema.type && !schema.properties && !schema.oneOf && !schema.anyOf && !schema.allOf;
 };
 
 const resolveSchemaTypeName = (schema: SchemaObject): string => {
     if (Array.isArray(schema.type)) return schema.type.join(' | ');
     if (schema.type === 'object' || schema.properties) return schema.title ?? 'object';
+    if (Array.isArray(schema.prefixItems) && schema.prefixItems.length > 0) {
+        const itemTypes = schema.prefixItems.map(s =>
+            Array.isArray(s.type) ? s.type.join(' | ') : (s.type ?? s.title ?? 'any')
+        );
+        return `[${itemTypes.join(', ')}]`;
+    }
     if (schema.type === 'array') {
         const items = schema.items;
         if (!items) return 'array';
@@ -123,7 +139,9 @@ const resolveSchemaTypeName = (schema: SchemaObject): string => {
         const itemType = items.type ?? inferTypeFromEnum(items.enum) ?? undefined;
         return `array[${items.title ?? itemType ?? 'any'}]`;
     }
+    if (schema.if) return 'conditional';
     if (!schema.type && schema.enum?.length) return inferTypeFromEnum(schema.enum) ?? 'unknown';
+    if (schema.const !== undefined && !schema.type) return inferTypeFromValue(schema.const);
     return schema.type ?? schema.title ?? 'unknown';
 };
 
@@ -153,12 +171,21 @@ const renderSchemaType = (schema: SchemaObject): string => {
 
     if (schema.allOf) return 'object';
 
+    if ((schema.type === 'array' || schema.prefixItems) && schema.prefixItems && schema.prefixItems.length > 0) {
+        const itemTypes = schema.prefixItems.map(s =>
+            Array.isArray(s.type) ? s.type.join(' | ') : (s.type ?? s.title ?? 'any')
+        );
+        return `[${itemTypes.join(', ')}]`;
+    }
+
     if (schema.type === 'array') {
         if (!schema.items) return 'array';
         const itemSchema = schema.items;
         if (Array.isArray(itemSchema.type)) return `array<${itemSchema.type.join(' | ')}>`;
         return `array[${itemSchema.title ?? itemSchema.type ?? 'any'}]`;
     }
+
+    if (schema.if) return 'conditional';
 
     if (schema.type === 'object' || (!schema.type && schema.properties)) {
         const name = schema.title ?? 'object';
@@ -169,6 +196,11 @@ const renderSchemaType = (schema: SchemaObject): string => {
     if (!schema.type && schema.enum?.length) {
         const inferred = inferTypeFromEnum(schema.enum);
         if (inferred) return schema.nullable ? `${inferred} | null` : inferred;
+    }
+
+    if (schema.const !== undefined && !schema.type) {
+        const inferred = inferTypeFromValue(schema.const);
+        return schema.nullable ? `${inferred} | null` : inferred;
     }
 
     const base = schema.type ?? schema.title ?? 'unknown';
@@ -184,6 +216,10 @@ const generateExample = (schema: SchemaObject | undefined): JsonValue => {
     if (s.example !== undefined) return s.example;
     if (Array.isArray(s.examples) && s.examples.length > 0) return s.examples[0];
 
+    if (Array.isArray(s.prefixItems) && s.prefixItems.length > 0) {
+        return s.prefixItems.map(item => generateExample(item));
+    }
+
     if (s.type === 'array') {
         if (!s.items) return [];
         return [generateExample(s.items)];
@@ -196,6 +232,14 @@ const generateExample = (schema: SchemaObject | undefined): JsonValue => {
 
     if (s.oneOf) {
         return generateExample(s.oneOf[0]);
+    }
+
+    if (s.if) {
+        // Generate from the "then" branch merged with base properties, falling back to "else"
+        const branch = s.then ?? s.else;
+        const base = s.properties ? generateObjectExample(s.properties) : {};
+        const branchExample = branch?.properties ? generateObjectExample(branch.properties) : {};
+        return { ...base, ...branchExample };
     }
 
     if (s.type === 'object' || s.properties) {

@@ -23,6 +23,10 @@
     {
       "name": "media",
       "description": "Polymorphic media items — tests discriminator rendering"
+    },
+    {
+      "name": "oas31",
+      "description": "OAS 3.1 edge cases — prefixItems, if/then/else, additionalProperties:false, titled variants, canExpand on non-property schemas"
     }
   ],
   "servers": [
@@ -312,6 +316,138 @@
         }
       }
     },
+    "/geo/track": {
+      "get": {
+        "tags": ["oas31"],
+        "operationId": "getGeoTrack",
+        "summary": "Get a GPS track",
+        "description": "Returns an array of `GeoPoint` tuples. Tests **prefixItems** rendering — each point is a `[latitude, longitude, elevation]` tuple. The extra `items: false` means no additional positional items are allowed beyond the three defined.",
+        "responses": {
+          "200": {
+            "description": "Array of GPS points",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/GeoPoint" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/events": {
+      "post": {
+        "tags": ["oas31"],
+        "operationId": "createEvent",
+        "summary": "Create an event",
+        "description": "Tests **if/then/else** conditional schemas. If `type` is `online`, the `url` field becomes required. Otherwise, `location` is required instead.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/EventPayload" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Event created" }
+        }
+      }
+    },
+    "/config": {
+      "get": {
+        "tags": ["oas31"],
+        "operationId": "getConfig",
+        "summary": "Get user configuration",
+        "description": "Tests **additionalProperties: false** — the response schema is a closed object. No properties beyond `theme` and `language` are permitted.",
+        "responses": {
+          "200": {
+            "description": "User configuration",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/StrictConfig" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["oas31"],
+        "operationId": "updateConfig",
+        "summary": "Update user configuration",
+        "description": "Same closed schema on the request body.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/StrictConfig" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Configuration updated" }
+        }
+      }
+    },
+    "/metrics": {
+      "post": {
+        "tags": ["oas31"],
+        "operationId": "pushMetrics",
+        "summary": "Push a metric bag",
+        "description": "Tests **patternProperties** + **additionalProperties as object** together. `MetricBag` has one fixed field (`timestamp`), any key matching `^metric_` must be a number, and all other extra keys must be strings. The childCount badge should reflect all three categories.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MetricBag" }
+            }
+          }
+        },
+        "responses": {
+          "204": { "description": "Metrics recorded" }
+        }
+      }
+    },
+    "/shapes": {
+      "post": {
+        "tags": ["oas31"],
+        "operationId": "createShape",
+        "summary": "Create a shape",
+        "description": "Tests **title in oneOf variants** and **required-first sort inside renderCompositeOption**. Each variant has a `title` (`Circle`, `Rectangle`) and a mix of required / optional properties — required ones should appear first in the expanded view.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Shape" }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Shape created" }
+        }
+      }
+    },
+    "/payloads": {
+      "post": {
+        "tags": ["oas31"],
+        "operationId": "sendPayload",
+        "summary": "Send a flexible payload",
+        "description": "Tests **canExpand on a variant with no direct properties**. The `Freeform` variant has only `additionalProperties: {type: string}` and no `properties` object — it must still be expandable and show the `[key: string]` row.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/FlexPayload" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Payload accepted" }
+        }
+      }
+    },
     "/media": {
       "post": {
         "tags": ["media"],
@@ -521,6 +657,111 @@
           },
           "label": { "$ref": "#/components/schemas/NonEmptyString" }
         }
+      },
+      "GeoPoint": {
+        "type": "array",
+        "title": "GeoPoint",
+        "description": "A GPS coordinate tuple `[latitude, longitude, elevation]`. Uses **prefixItems** — each position has its own type and description. `items: false` forbids extra positions beyond the three defined.",
+        "prefixItems": [
+          { "type": "number", "description": "Latitude in decimal degrees", "minimum": -90, "maximum": 90 },
+          { "type": "number", "description": "Longitude in decimal degrees", "minimum": -180, "maximum": 180 },
+          { "type": "number", "description": "Elevation in metres above sea level" }
+        ],
+        "items": false,
+        "minItems": 3,
+        "maxItems": 3
+      },
+      "EventPayload": {
+        "type": "object",
+        "title": "EventPayload",
+        "description": "An event. Uses **if/then/else** — `url` is required for online events, `location` is required for in-person events.",
+        "required": ["type", "name"],
+        "properties": {
+          "type": { "type": "string", "enum": ["online", "in-person"], "description": "Event delivery mode" },
+          "name": { "type": "string", "description": "Event name" },
+          "url": { "type": "string", "format": "uri", "description": "Stream URL (online events only)" },
+          "location": { "type": "string", "description": "Physical location (in-person events only)" }
+        },
+        "if": {
+          "properties": { "type": { "const": "online" } }
+        },
+        "then": {
+          "required": ["url"],
+          "properties": { "url": { "type": "string", "format": "uri" } }
+        },
+        "else": {
+          "required": ["location"],
+          "properties": { "location": { "type": "string" } }
+        }
+      },
+      "StrictConfig": {
+        "type": "object",
+        "title": "StrictConfig",
+        "description": "User configuration object. **additionalProperties: false** — no fields beyond `theme` and `language` are accepted.",
+        "additionalProperties": false,
+        "required": ["theme"],
+        "properties": {
+          "theme": { "type": "string", "enum": ["light", "dark", "system"], "description": "UI colour scheme" },
+          "language": { "type": "string", "description": "BCP-47 language tag, e.g. `en-US`" }
+        }
+      },
+      "MetricBag": {
+        "type": "object",
+        "title": "MetricBag",
+        "description": "A named bag of metrics. Tests **patternProperties** + **additionalProperties as object**. Keys starting with `metric_` must be numbers; all other extra keys must be strings. The collapsed childCount badge should reflect all three entry types.",
+        "properties": {
+          "timestamp": { "type": "string", "format": "date-time", "description": "Collection timestamp" }
+        },
+        "patternProperties": {
+          "^metric_": { "type": "number", "description": "A numeric metric value" }
+        },
+        "additionalProperties": { "type": "string", "description": "Arbitrary string metadata" }
+      },
+      "Shape": {
+        "description": "A 2-D shape. Tests **title on oneOf variants** and **required-first sort** — required fields (`radius` / `width`+`height`) should appear before optional ones (`color`, `opacity`) in the expanded view.",
+        "oneOf": [
+          {
+            "title": "Circle",
+            "type": "object",
+            "required": ["radius"],
+            "properties": {
+              "color": { "type": "string", "description": "Fill colour" },
+              "opacity": { "type": "number", "minimum": 0, "maximum": 1, "description": "Opacity 0–1" },
+              "radius": { "type": "number", "description": "Radius in pixels" }
+            }
+          },
+          {
+            "title": "Rectangle",
+            "type": "object",
+            "required": ["width", "height"],
+            "properties": {
+              "color": { "type": "string", "description": "Fill colour" },
+              "width": { "type": "number", "description": "Width in pixels" },
+              "height": { "type": "number", "description": "Height in pixels" }
+            }
+          }
+        ]
+      },
+      "FlexPayload": {
+        "description": "Tests **canExpand on a variant without direct properties**. `Freeform` has only `additionalProperties` (no `properties` key) — it must still be expandable and display a `[key: string]: string` row.",
+        "oneOf": [
+          {
+            "title": "Fixed",
+            "type": "object",
+            "description": "A payload with well-known keys",
+            "required": ["key", "value"],
+            "properties": {
+              "key": { "type": "string" },
+              "value": { "type": "string" }
+            }
+          },
+          {
+            "title": "Freeform",
+            "type": "object",
+            "description": "Any string key-value pairs — no fixed properties",
+            "additionalProperties": { "type": "string" }
+          }
+        ]
       },
       "PrintBook": {
         "type": "object",
