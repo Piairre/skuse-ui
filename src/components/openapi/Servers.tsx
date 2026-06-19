@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -127,17 +126,9 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
         Object.entries(selectedServer.variables).length > 0;
 
     return (
-        <Card>
-            <CardHeader className="pb-2">
-                <CardTitle className="flex items-center text-xl font-semibold">
-                    <ServerIcon className="mr-2 h-5 w-5"/>
-                    {servers.length === 0 ? 'Default Server' : 'Servers'}
-                </CardTitle>
-            </CardHeader>
-            <CardContent>
-                <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
                     <div className="w-full">
-                        <div className="relative pt-4">
+                        <div className="relative">
                             <Popover open={openServerPopover} onOpenChange={setOpenServerPopover}>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -206,9 +197,7 @@ const Servers: React.FC<ServerBlockProps> = ({ servers }) => {
                             </div>
                         </div>
                     )}
-                </div>
-            </CardContent>
-        </Card>
+        </div>
     );
 };
 

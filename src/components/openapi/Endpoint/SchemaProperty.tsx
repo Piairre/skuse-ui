@@ -278,10 +278,12 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                 <SchemaBadges schema={s} />
             </div>
             {s.description && (
-                <FormattedMarkdown
-                    className="!text-xs !text-gray-600 dark:!text-gray-400"
-                    markdown={s.description}
-                />
+                <div onClick={e => e.stopPropagation()}>
+                    <FormattedMarkdown
+                        className="!text-xs !text-gray-600 dark:!text-gray-400"
+                        markdown={s.description}
+                    />
+                </div>
             )}
             {s.enum && s.enum.length > 0 && (
                 <div className="flex flex-wrap items-center gap-1 mt-0.5">

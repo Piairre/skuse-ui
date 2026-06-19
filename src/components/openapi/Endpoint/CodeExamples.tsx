@@ -16,6 +16,8 @@ interface CodeExamplesProps {
     method: string;
     path: string;
     requestBody?: string;
+    hasRequestBody?: boolean;
+    defaultContentType?: string;
     security?: Array<Record<string, string[]>>;
 }
 
@@ -109,8 +111,8 @@ const getSelectKey = (lang: FlattenedLanguage) =>
 const findDefaultLanguage = (langs: FlattenedLanguage[]): FlattenedLanguage =>
     langs.find(l => l.language.key === 'curl') ?? langs[0] as FlattenedLanguage;
 
-const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, security }) => {
-    const { computedUrl, credentials, spec } = useOpenAPIContext();
+const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, hasRequestBody, defaultContentType, security }) => {
+    const { computedUrl, credentials, spec, preferredContentType } = useOpenAPIContext();
     const [languages, setLanguages] = useState<FlattenedLanguage[]>([]);
     const [selectedLanguage, setSelectedLanguage] = useState<FlattenedLanguage | null>(null);
     const [snippet, setSnippet] = useState<string>('');
@@ -142,10 +144,15 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, 
                 ? `${computedUrl}${path}?${new URLSearchParams(queryParams)}`
                 : `${computedUrl}${path}`;
 
+            const contentType = preferredContentType ?? defaultContentType ?? 'application/json';
+            const allHeaders: HeaderDef[] = hasRequestBody
+                ? [...authHeaders, { key: 'Content-Type', value: contentType }]
+                : authHeaders;
+
             const request = new postman.Request({
                 method: method.toUpperCase(),
                 url: urlWithQuery,
-                header: authHeaders,
+                header: allHeaders,
                 ...(requestBody && {
                     body: {
                         mode: 'raw' as const,
@@ -175,7 +182,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, 
             console.error('Request creation error:', error);
             setSnippet('Could not generate snippet');
         }
-    }, [method, path, requestBody, selectedLanguage, computedUrl, credentials, security, spec]);
+    }, [method, path, requestBody, hasRequestBody, selectedLanguage, computedUrl, credentials, security, spec, preferredContentType]);
 
     const handleSelectChange = (value: string) => {
         const found = languages.find(l => getSelectKey(l) === value);
