@@ -14,20 +14,15 @@ import { getBadgeColor, getOperationId, groupEndpointsByTags } from '@/utils/ope
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 import { EnhancedOperationObject } from '@/types/openapi';
 
-const MAX_VISIBLE = 5;
-
 interface TagMeta {
     description?: string;
     externalDocs?: { url: string; description?: string };
 }
 
 const TagCard: React.FC<{ tag: string; endpoints: EnhancedOperationObject[]; meta?: TagMeta }> = ({ tag, endpoints, meta }) => {
-    const visible = endpoints.slice(0, MAX_VISIBLE);
-    const extra = endpoints.length - MAX_VISIBLE;
-
     return (
-        <div className="rounded-lg border border-border/60 bg-background p-3 space-y-2 h-full">
-            <div className="pb-1.5 border-b border-border/40">
+        <div className="rounded-lg border border-border/60 bg-background p-3 space-y-2 h-full flex flex-col">
+            <div className="pb-1.5 border-b border-border/40 shrink-0">
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 min-w-0">
                         <span className="text-sm font-semibold truncate">{tag}</span>
@@ -52,8 +47,8 @@ const TagCard: React.FC<{ tag: string; endpoints: EnhancedOperationObject[]; met
                     <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{meta.description}</p>
                 )}
             </div>
-            <div className="space-y-0.5">
-                {visible.map((op) => (
+            <div className="space-y-0.5 overflow-y-auto max-h-48 scrollbar-thin">
+                {endpoints.map((op) => (
                     <Link
                         key={`${op.method}-${op.path}`}
                         to="/$tag/$operationIdentifier"
@@ -70,11 +65,6 @@ const TagCard: React.FC<{ tag: string; endpoints: EnhancedOperationObject[]; met
                         </span>
                     </Link>
                 ))}
-                {extra > 0 && (
-                    <p className="text-[10px] text-muted-foreground px-1 pt-1">
-                        +{extra} more endpoint{extra > 1 ? 's' : ''}
-                    </p>
-                )}
             </div>
         </div>
     );
@@ -108,9 +98,9 @@ const TagsOverview: React.FC = () => {
             <Carousel
                 opts={{ loop: true, align: 'start', dragFree: true, slidesToScroll: 2 }}
                 plugins={[WheelGesturesPlugin() as never]}
-                className="w-full"
+className="w-full"
             >
-                <CarouselContent className="-ml-3 justify-center">
+                <CarouselContent className="-ml-3">
                     {tagGroups.map(([tag, endpoints]) => (
                         <CarouselItem key={tag} className="pl-3 basis-[min(calc(50%-6px),300px)]">
                             <TagCard tag={tag} endpoints={endpoints} meta={tagMeta.get(tag)} />
