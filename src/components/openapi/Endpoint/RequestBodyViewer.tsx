@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 
 interface RequestBodyViewerProps {
     requestBody: RequestBodyObject;
+    hideExample?: boolean;
 }
 
 const ExamplesSelector: React.FC<{
@@ -45,7 +46,7 @@ const ExamplesSelector: React.FC<{
     </div>
 );
 
-const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) => {
+const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody, hideExample = false }) => {
     const { preferredContentType, setPreferredContentType } = useOpenAPIContext();
     const contentTypes = Object.keys(requestBody.content);
     const firstContentType = contentTypes[0] as string;
@@ -140,7 +141,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody }) =>
                 </div>
             )}
 
-            {content && (
+            {content && !hideExample && (
                 <div className="space-y-2">
                     <h4 className="text-sm font-medium text-foreground">Example</h4>
                     {content.examples && Object.keys(content.examples).length > 0 && (

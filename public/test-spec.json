@@ -208,6 +208,50 @@
       }
     }
   },
+  "webhooks": {
+    "newBook": {
+      "post": {
+        "operationId": "webhookNewBook",
+        "summary": "New book created",
+        "description": "Fired whenever a new book is added to the library. Your endpoint should respond with a 2xx status to acknowledge receipt.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/Book" }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Webhook acknowledged" }
+        }
+      }
+    },
+    "bookDeleted": {
+      "post": {
+        "operationId": "webhookBookDeleted",
+        "summary": "Book deleted",
+        "description": "Fired when a book is permanently removed from the system.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": { "type": "integer" },
+                  "deletedAt": { "type": "string", "format": "date-time" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Acknowledged" }
+        }
+      }
+    }
+  },
   "components": {
     "securitySchemes": {
       "bearerAuth": {
