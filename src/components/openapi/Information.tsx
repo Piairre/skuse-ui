@@ -105,7 +105,7 @@ const Information: React.FC = () => {
 
                 {spec.info.description && (
                     <div className="rounded-xl bg-muted/50 p-4">
-                        <FormattedMarkdown className="break-words" markdown={spec.info.description} maxLength={5000} />
+                        <FormattedMarkdown className="break-words" markdown={spec.info.description} maxLength={1000} />
                     </div>
                 )}
 

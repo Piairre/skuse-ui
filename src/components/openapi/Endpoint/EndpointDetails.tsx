@@ -147,7 +147,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
     });
 
     const effectiveDescription = operation.description ?? operation.pathDescription;
-    const effectiveSummary = operation.summary ?? operation.pathSummary;
+    const effectiveSummary = operation.summary || operation.pathSummary;
 
     const hasDescription = !!(effectiveDescription || operation.deprecated || operation.externalDocs);
     const hasParams = parameters.length > 0 || !!requestBody || !!(operation.callbacks && Object.keys(operation.callbacks).length > 0);
@@ -172,11 +172,8 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                         Authentication Required
                     </Badge>
                 )}
-                <div className="w-full flex items-center justify-between gap-3 -mt-1">
-                    {effectiveSummary
-                        ? <p className="text-sm text-muted-foreground">{effectiveSummary}</p>
-                        : <span />}
-                    <div className="flex rounded-md border overflow-hidden text-xs shrink-0">
+                {!requiresAuth && (
+                    <div className="ml-auto flex rounded-md border overflow-hidden text-xs shrink-0">
                         <button
                             onClick={() => handleModeChange('reference')}
                             className={cn('w-28 flex items-center justify-center gap-1.5 py-1.5 transition-colors', mode === 'reference' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
@@ -192,7 +189,32 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                             Try it
                         </button>
                     </div>
-                </div>
+                )}
+                {(effectiveSummary || requiresAuth) && (
+                    <div className="w-full flex items-center justify-between gap-3 -mt-1">
+                        {effectiveSummary
+                            ? <p className="text-sm text-muted-foreground">{effectiveSummary}</p>
+                            : <span />}
+                        {requiresAuth && (
+                            <div className="flex rounded-md border overflow-hidden text-xs shrink-0">
+                                <button
+                                    onClick={() => handleModeChange('reference')}
+                                    className={cn('w-28 flex items-center justify-center gap-1.5 py-1.5 transition-colors', mode === 'reference' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+                                >
+                                    <BookOpen className="h-3.5 w-3.5" />
+                                    Reference
+                                </button>
+                                <button
+                                    onClick={() => handleModeChange('playground')}
+                                    className={cn('w-28 flex items-center justify-center gap-1.5 py-1.5 transition-colors border-l', mode === 'playground' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+                                >
+                                    <Play className="h-3.5 w-3.5" />
+                                    Try it
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {mode === 'playground' ? (
