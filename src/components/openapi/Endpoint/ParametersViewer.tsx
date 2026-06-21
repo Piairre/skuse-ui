@@ -101,7 +101,7 @@ const ParameterProperty: React.FC<{
             <div className="flex flex-wrap items-center gap-1 mt-1" onClick={e => e.stopPropagation()}>
                 <span className="text-xs text-gray-600 dark:text-gray-400">enum:</span>
                 {schema.enum.map((value, i) => (
-                    <Badge key={i} variant="outline" className="text-xs bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800">
+                    <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800">
                         {JSON.stringify(value)}
                     </Badge>
                 ))}

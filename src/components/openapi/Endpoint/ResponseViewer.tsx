@@ -70,16 +70,16 @@ const HeaderViewer: React.FC<HeaderViewerProps> = ({headers}) => {
                                 <span className="font-mono text-sm">{name}</span>
                                 {header.required && (
                                     <Badge variant="outline"
-                                           className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+                                           className="text-[10px] px-1.5 py-0 h-4 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
                                         required
                                     </Badge>
                                 )}
-                                <Badge variant="outline" className="text-xs">
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
                                     {(header.type || header.schema) ? (header.schema ? renderSchemaType(header.schema) : 'unknown') : ''}
                                 </Badge>
                                 {header.schema?.pattern && (
                                     <Badge variant="outline"
-                                           className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                                           className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
                                         pattern
                                     </Badge>
                                 )}
@@ -193,7 +193,7 @@ const ResponseContent: React.FC<{ response: ResponseObject }> = ({ response }) =
                             </SelectContent>
                         </Select>
                     ) : (
-                        <Badge variant="outline" className="text-xs font-mono">{contentTypes[0]}</Badge>
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono">{contentTypes[0]}</Badge>
                     )}
 
                     {schema ? (

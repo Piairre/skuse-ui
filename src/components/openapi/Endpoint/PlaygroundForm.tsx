@@ -183,7 +183,7 @@ const PlaygroundForm: React.FC<PlaygroundFormProps> = ({
                                 </SelectContent>
                             </Select>
                         ) : (
-                            contentTypes[0] && <Badge variant="outline" className="text-xs font-mono">{contentTypes[0]}</Badge>
+                            contentTypes[0] && <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono">{contentTypes[0]}</Badge>
                         )}
                     </div>
 

@@ -105,10 +105,10 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody, hide
                         </SelectContent>
                     </Select>
                 ) : (
-                    <Badge variant="outline" className="text-xs font-mono">{firstContentType}</Badge>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono">{firstContentType}</Badge>
                 )}
                 {requestBody.required && (
-                    <Badge variant="outline" className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">required</Badge>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">required</Badge>
                 )}
             </div>
 

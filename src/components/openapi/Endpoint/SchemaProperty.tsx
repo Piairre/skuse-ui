@@ -166,11 +166,11 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
 
         const header = (
             <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant="outline" className="text-xs">{label} {index + 1}</Badge>
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">{label} {index + 1}</Badge>
                 {option.title && (
                     <span className="font-mono text-xs font-medium text-gray-900 dark:text-gray-100">{option.title}</span>
                 )}
-                <Badge variant="outline" className="text-xs border-slate-200 dark:border-slate-700">
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-slate-200 dark:border-slate-700">
                     {renderSchemaType(option)}
                 </Badge>
                 {option.description && (
@@ -190,7 +190,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                         <div className="flex flex-wrap items-center gap-1 pl-6">
                             <span className="text-xs text-muted-foreground">enum:</span>
                             {itemSchema.enum.map((value, i) => (
-                                <Badge key={i} variant="outline" className="text-xs font-mono bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                                <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-monobg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
                                     {JSON.stringify(value)}
                                 </Badge>
                             ))}
@@ -335,7 +335,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                     <div className="flex flex-col gap-0.5 px-2">
                         {Object.entries(s.discriminator.mapping).map(([value, ref]) => (
                             <div key={value} className="flex items-center gap-1.5 text-xs">
-                                <Badge variant="outline" className="font-mono text-xs">{value}</Badge>
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono">{value}</Badge>
                                 <span className="text-muted-foreground">→</span>
                                 <span className="font-mono text-xs text-muted-foreground">{ref.split('/').pop()}</span>
                             </div>
@@ -493,7 +493,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
             {s.discriminator && (
                 <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-xs text-muted-foreground">discriminator:</span>
-                    <Badge variant="outline" className="text-xs font-mono bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300">
                         {s.discriminator.propertyName}
                     </Badge>
                 </div>
@@ -502,7 +502,7 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
                 <div className="flex flex-wrap items-center gap-1 mt-0.5">
                     <span className="text-xs text-muted-foreground">enum:</span>
                     {s.enum.map((value, i) => (
-                        <Badge key={i} variant="outline" className="text-xs font-mono bg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
+                        <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-monobg-violet-50 dark:bg-violet-950/40 border-violet-200 dark:border-violet-800 text-violet-700 dark:text-violet-300">
                             {JSON.stringify(value)}
                         </Badge>
                     ))}
@@ -516,12 +516,12 @@ const SchemaProperty: React.FC<SchemaPropertyProps> = ({
             {hasChildren ? (
                 <Collapsible open={isOpen} onOpenChange={setIsOpen}>
                     <CollapsibleTrigger className={cn(
-                        "group flex items-start gap-2 w-full p-2 cursor-pointer transition-colors",
+                        "group flex items-center gap-2 w-full p-2 cursor-pointer transition-colors",
                         isOpen
                             ? cn("rounded-t", depthStyle.openBg, "border-b", depthStyle.separator)
                             : "rounded hover:bg-slate-50 dark:hover:bg-slate-800"
                     )}>
-                        <ChevronRight className="h-4 w-4 mt-1 shrink-0 text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
+                        <ChevronRight className="h-4 w-4 shrink-0 text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
                         {headerContent}
                         {isRoot && (
                             <div className="flex items-center gap-1 ml-auto shrink-0" onClick={e => e.stopPropagation()}>
