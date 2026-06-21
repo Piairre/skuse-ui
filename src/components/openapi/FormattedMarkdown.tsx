@@ -86,7 +86,7 @@ export default function FormattedMarkdown({
     useHashLinkFix();
 
     if (languageCode === 'json') {
-        markdown = JSON.stringify(JSON.parse(markdown), null, 2);
+        try { markdown = JSON.stringify(JSON.parse(markdown), null, 2); } catch { /* not valid JSON, render as-is */ }
     }
 
     const formattedContent = languageCode
