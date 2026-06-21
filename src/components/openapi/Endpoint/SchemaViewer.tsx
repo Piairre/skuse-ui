@@ -118,6 +118,7 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples, example, 
                             <FormattedMarkdown
                                 markdown={typeof val === 'string' ? val : JSON.stringify(val, null, 2)}
                                 languageCode={contentTypeToLanguage(contentType)}
+                                maxLines={20}
                                 className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
                             />
                         );

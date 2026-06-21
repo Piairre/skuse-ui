@@ -218,6 +218,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, 
                 <FormattedMarkdown
                     markdown={snippet}
                     languageCode={selectedLanguage?.language.syntax_mode ?? ''}
+                    maxLines={20}
                     className="[&_code]:!whitespace-pre-wrap"
                 />
             </div>

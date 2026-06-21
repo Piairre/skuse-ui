@@ -141,6 +141,7 @@ const PlaygroundResponse: React.FC<PlaygroundResponseProps> = ({ result, loading
                 <FormattedMarkdown
                     markdown={resolved.body}
                     languageCode={resolved.lang === 'text' ? undefined : resolved.lang}
+                    maxLines={20}
                     className="[&_code]:!whitespace-pre-wrap !border !rounded-lg !border-slate-200 dark:!border-slate-700"
                 />
             ) : (

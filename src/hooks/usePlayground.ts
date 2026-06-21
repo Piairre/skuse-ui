@@ -22,6 +22,13 @@ interface UsePlaygroundOptions {
     requestBody?: RequestBodyObject;
 }
 
+const getDefaultParamValue = (p: ParameterObject): string => {
+    const schema = p.schema as SchemaObject | undefined;
+    if (schema?.default !== undefined) return String(schema.default);
+    if (Array.isArray(schema?.enum) && schema.enum.length === 1) return String(schema.enum[0]);
+    return '';
+};
+
 export function usePlayground({ method, path, parameters, security, requestBody }: UsePlaygroundOptions) {
     const { computedUrl, credentials, preferredContentType, setPreferredContentType } = useOpenAPIContext();
 
@@ -30,18 +37,15 @@ export function usePlayground({ method, path, parameters, security, requestBody 
     const headerParams = parameters.filter(p => p.in === 'header');
 
     const [pathValues, setPathValues] = useState<Record<string, string>>(() =>
-        Object.fromEntries(pathParams.map(p => [p.name, '']))
+        Object.fromEntries(pathParams.map(p => [p.name, getDefaultParamValue(p)]))
     );
 
     const [queryValues, setQueryValues] = useState<Record<string, string>>(() =>
-        Object.fromEntries(queryParams.map(p => {
-            const def = (p.schema as SchemaObject | undefined)?.default;
-            return [p.name, def !== undefined ? String(def) : ''];
-        }))
+        Object.fromEntries(queryParams.map(p => [p.name, getDefaultParamValue(p)]))
     );
 
     const [headerValues, setHeaderValues] = useState<Record<string, string>>(() =>
-        Object.fromEntries(headerParams.map(p => [p.name, '']))
+        Object.fromEntries(headerParams.map(p => [p.name, getDefaultParamValue(p)]))
     );
 
     const contentTypes = requestBody ? Object.keys(requestBody.content) : [];
@@ -96,12 +100,9 @@ export function usePlayground({ method, path, parameters, security, requestBody 
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     useEffect(() => {
-        setPathValues(Object.fromEntries(parameters.filter(p => p.in === 'path').map(p => [p.name, ''])));
-        setQueryValues(Object.fromEntries(parameters.filter(p => p.in === 'query').map(p => {
-            const def = (p.schema as SchemaObject | undefined)?.default;
-            return [p.name, def !== undefined ? String(def) : ''];
-        })));
-        setHeaderValues(Object.fromEntries(parameters.filter(p => p.in === 'header').map(p => [p.name, ''])));
+        setPathValues(Object.fromEntries(parameters.filter(p => p.in === 'path').map(p => [p.name, getDefaultParamValue(p)])));
+        setQueryValues(Object.fromEntries(parameters.filter(p => p.in === 'query').map(p => [p.name, getDefaultParamValue(p)])));
+        setHeaderValues(Object.fromEntries(parameters.filter(p => p.in === 'header').map(p => [p.name, getDefaultParamValue(p)])));
         setEnabledParams(Object.fromEntries(parameters.map(p => [`${p.in}:${p.name}`, true])));
         setBody(getDefaultBody(contentType));
         setResult(null);
