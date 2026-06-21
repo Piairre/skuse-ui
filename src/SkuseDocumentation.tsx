@@ -1,23 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSpec } from '@/hooks/useSpec';
 import Sidebar from "@/components/layouts/Sidebar";
-import { Outlet, useLocation } from "@tanstack/react-router";
+import { Outlet, RouterProvider, useLocation } from "@tanstack/react-router";
 import MinimifiedInfo from "@/components/layouts/MinimifiedInfo";
 import LayoutSkeleton from '@/components/Skeletons/LayoutSkeleton';
 import { Menu, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { OpenAPIProvider } from '@/hooks/OpenAPIContext';
+import { ThemeProvider } from '@/components/theme-provider';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { Toaster } from '@/components/ui/sonner';
+import { createAppRouter } from '@/router/routes';
 
-interface SkuseDocumentationProps {
+export interface SkuseDocumentationProps {
     openApiUrl: string;
+    /** Default: 'system' */
+    theme?: 'light' | 'dark' | 'system';
 }
 
-export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiUrl }) => {
+// Internal layout — rendered inside the router context
+export const DocumentationShell: React.FC<{ openApiUrl: string }> = ({ openApiUrl }) => {
     const { spec, error, loading, retry } = useSpec({ openApiUrl });
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
 
-    // Close sidebar on navigation (mobile)
     useEffect(() => {
         setSidebarOpen(false);
     }, [location.pathname]);
@@ -27,12 +34,12 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
         <div className="h-screen flex flex-col items-center justify-center gap-6 px-4 text-center">
             <AlertCircle className="h-12 w-12 text-muted-foreground" />
             <div className="space-y-1">
-                <h2 className="text-lg font-semibold">Impossible de charger la documentation</h2>
+                <h2 className="text-lg font-semibold">Failed to load documentation</h2>
                 <p className="text-sm text-muted-foreground max-w-md">{error.message}</p>
             </div>
             <Button variant="outline" onClick={retry} className="gap-2">
                 <RefreshCw className="h-4 w-4" />
-                Réessayer
+                Retry
             </Button>
         </div>
     );
@@ -43,7 +50,6 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
     return (
         <div className="h-screen flex flex-col">
             <div className="flex flex-1 overflow-hidden">
-                {/* Mobile backdrop — starts below the navbar (top-16) */}
                 {sidebarOpen && (
                     <div
                         className={cn(
@@ -53,8 +59,6 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
                         onClick={() => setSidebarOpen(false)}
                     />
                 )}
-
-                {/* Sidebar */}
                 <div className={cn(
                     "overflow-y-auto bg-background transition-transform duration-300 ease-in-out",
                     showMinimifiedInfo
@@ -70,8 +74,6 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
                     {showMinimifiedInfo && (
                         <MinimifiedInfo onToggleSidebar={() => setSidebarOpen(o => !o)} />
                     )}
-
-                    {/* Mobile header on home page */}
                     {!showMinimifiedInfo && (
                         <div className="md:hidden sticky top-0 z-50 bg-muted/60 backdrop-blur-md shadow-sm flex items-center gap-2 px-4 py-2">
                             <Button
@@ -85,12 +87,30 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({ openApiU
                             <span className="text-sm font-semibold truncate">{spec.info.title}</span>
                         </div>
                     )}
-
                     <div className="p-0 md:p-4 flex-1">
                         <Outlet />
                     </div>
                 </div>
             </div>
         </div>
+    );
+};
+
+// Public component — self-contained, creates its own router + providers
+export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({
+    openApiUrl,
+    theme = 'system',
+}) => {
+    const router = useMemo(() => createAppRouter(openApiUrl), [openApiUrl]);
+
+    return (
+        <ThemeProvider defaultTheme={theme} storageKey="skuse-ui-theme">
+            <TooltipProvider delayDuration={300}>
+                <OpenAPIProvider>
+                    <RouterProvider router={router} />
+                    <Toaster richColors closeButton position="bottom-right" />
+                </OpenAPIProvider>
+            </TooltipProvider>
+        </ThemeProvider>
     );
 };

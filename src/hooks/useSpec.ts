@@ -25,7 +25,7 @@ const calculateInitialUrl = (spec: UnifiedOpenAPI, specFetchUrl: string) => {
     return url;
 };
 
-export function useSpec({ openApiUrl }: { openApiUrl: string }) {
+export function useSpec({ openApiUrl, updateTitle = false }: { openApiUrl: string; updateTitle?: boolean }) {
     const {
         spec,
         setSpec,
@@ -56,10 +56,10 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
                 const rawSpec: OpenAPIInputDocument = await response.json();
                 const resolvedSpec = resolveOpenAPIDocument(rawSpec);
 
-                if (resolvedSpec?.info?.title) {
-                    document.title = `${resolvedSpec.info.title} - Skuse UI`;
-                } else {
-                    document.title = 'API Docs - Skuse UI';
+                if (updateTitle) {
+                    document.title = resolvedSpec?.info?.title
+                        ? `${resolvedSpec.info.title} - Skuse UI`
+                        : 'API Docs - Skuse UI';
                 }
 
                 const initialUrl = calculateInitialUrl(resolvedSpec, openApiUrl);

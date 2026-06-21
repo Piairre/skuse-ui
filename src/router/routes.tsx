@@ -4,42 +4,41 @@ import {
     Router
 } from '@tanstack/react-router';
 import Information from '@/components/openapi/Information';
-import { SkuseDocumentation } from "@/SkuseDocumentation";
+import { DocumentationShell } from "@/SkuseDocumentation";
 import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import Models from "@/components/openapi/Models";
 import WebhookDetails from "@/components/openapi/WebhookDetails";
 
-const rootRoute = new RootRoute({
-    component: () => (
-        // See examples to test doc : https://apis.guru/
-        <SkuseDocumentation openApiUrl={"https://api.apis.guru/v2/specs/apispot.io/whois/1.0/openapi.json"} />
-    )
-});
+export function createAppRouter(openApiUrl: string) {
+    const rootRoute = new RootRoute({
+        component: () => <DocumentationShell openApiUrl={openApiUrl} />
+    });
 
-const indexRoute = new Route({
-    getParentRoute: () => rootRoute,
-    path: '/',
-    component: Information
-});
+    const indexRoute = new Route({
+        getParentRoute: () => rootRoute,
+        path: '/',
+        component: Information
+    });
 
-const endpointRoute = new Route({
-    getParentRoute: () => rootRoute,
-    path: '/$tag/$operationId',
-    component: EndpointDetails
-});
+    const endpointRoute = new Route({
+        getParentRoute: () => rootRoute,
+        path: '/$tag/$operationId',
+        component: EndpointDetails
+    });
 
-const modelsRoute = new Route({
-    getParentRoute: () => rootRoute,
-    path: '/models',
-    component: Models
-});
+    const modelsRoute = new Route({
+        getParentRoute: () => rootRoute,
+        path: '/models',
+        component: Models
+    });
 
-const webhookRoute = new Route({
-    getParentRoute: () => rootRoute,
-    path: '/webhooks/$webhookName/$operationId',
-    component: WebhookDetails
-});
+    const webhookRoute = new Route({
+        getParentRoute: () => rootRoute,
+        path: '/webhooks/$webhookName/$operationId',
+        component: WebhookDetails
+    });
 
-const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, modelsRoute, webhookRoute]);
+    const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, modelsRoute, webhookRoute]);
 
-export const router = new Router({ routeTree });
+    return new Router({ routeTree });
+}
