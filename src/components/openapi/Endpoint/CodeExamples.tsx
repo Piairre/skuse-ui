@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { convert, getLanguageList } from 'postman-code-generators';
-import * as postman from 'postman-collection';
+import { HTTPSnippet } from 'httpsnippet-lite';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 import { AuthCredential, SecuritySchemeObject } from '@/types/unified-openapi-types';
@@ -25,6 +24,26 @@ interface CodeExamplesProps {
 
 type HeaderDef = { key: string; value: string };
 
+const LANGUAGES = [
+    { label: 'cURL',               target: 'shell',      client: 'curl',          syntax: 'bash' },
+    { label: 'HTTPie',             target: 'shell',      client: 'httpie',        syntax: 'bash' },
+    { label: 'Wget',               target: 'shell',      client: 'wget',          syntax: 'bash' },
+    { label: 'JavaScript (fetch)', target: 'javascript', client: 'fetch',         syntax: 'javascript' },
+    { label: 'JavaScript (XHR)',   target: 'javascript', client: 'xhr',           syntax: 'javascript' },
+    { label: 'Node.js (fetch)',    target: 'node',       client: 'fetch',         syntax: 'javascript' },
+    { label: 'Node.js (axios)',    target: 'node',       client: 'axios',         syntax: 'javascript' },
+    { label: 'Python',             target: 'python',     client: 'requests',      syntax: 'python' },
+    { label: 'PHP',                target: 'php',        client: 'curl',          syntax: 'php' },
+    { label: 'Ruby',               target: 'ruby',       client: 'native',        syntax: 'ruby' },
+    { label: 'Go',                 target: 'go',         client: 'native',        syntax: 'go' },
+    { label: 'Java (OkHttp)',      target: 'java',       client: 'okhttp',        syntax: 'java' },
+    { label: 'C#',                 target: 'csharp',     client: 'restsharp',     syntax: 'csharp' },
+    { label: 'Swift',              target: 'swift',      client: 'nsurlsession',  syntax: 'swift' },
+    { label: 'Kotlin',             target: 'kotlin',     client: 'okhttp',        syntax: 'kotlin' },
+] as const;
+
+type Lang = typeof LANGUAGES[number];
+
 function resolveAuthHeaders(
     security: Array<Record<string, string[]>> | undefined,
     securitySchemes: Record<string, SecuritySchemeObject> | undefined,
@@ -33,7 +52,6 @@ function resolveAuthHeaders(
     const empty = { headers: [] as HeaderDef[], queryParams: {} as Record<string, string> };
     if (!securitySchemes) return empty;
 
-    // Candidates: endpoint security → global spec security → any set credential
     const requirements: Array<Record<string, string[]>> = security?.length
         ? security
         : Object.keys(credentials).length
@@ -49,9 +67,7 @@ function resolveAuthHeaders(
 
         for (const name of names) {
             const cred = credentials[name];
-            const scheme = securitySchemes[name];
-            if (!cred || !scheme) continue;
-
+            if (!cred) continue;
             if (cred.type === 'bearer') {
                 headers.push({ key: 'Authorization', value: `Bearer ${cred.token}` });
             } else if (cred.type === 'basic') {
@@ -59,12 +75,8 @@ function resolveAuthHeaders(
             } else if (cred.type === 'oauth2') {
                 headers.push({ key: 'Authorization', value: `${cred.tokenType} ${cred.accessToken}` });
             } else if (cred.type === 'apiKey') {
-                if (cred.in === 'header') {
-                    headers.push({ key: cred.name, value: cred.key });
-                } else if (cred.in === 'query') {
-                    queryParams[cred.name] = cred.key;
-                }
-                // cookie: not injectable in curl snippets
+                if (cred.in === 'header') headers.push({ key: cred.name, value: cred.key });
+                else if (cred.in === 'query') queryParams[cred.name] = cred.key;
             }
         }
 
@@ -74,141 +86,86 @@ function resolveAuthHeaders(
     return empty;
 }
 
-interface LanguageVariant {
-    key: string;
-    label: string;
-}
-
-interface Language {
-    key: string;
-    label: string;
-    syntax_mode: string;
-    variants: LanguageVariant[];
-}
-
-interface FlattenedLanguage {
-    language: Language;
-    variant?: string;
-}
-
-interface PostmanRequestOptions {
-    indentCount: number;
-    indentType: 'Space' | 'Tab';
-    trimRequestBody: boolean;
-    followRedirect: boolean;
-}
-
-type ConvertCallback = (error: Error | null, snippet: string) => void;
-
-const DEFAULT_REQUEST_OPTIONS: PostmanRequestOptions = {
-    indentCount: 2,
-    indentType: 'Space',
-    trimRequestBody: true,
-    followRedirect: true,
-};
-
-const getSelectKey = (lang: FlattenedLanguage) =>
-    lang.variant ? `${lang.language.key}:${lang.variant}` : lang.language.key;
-
-const findDefaultLanguage = (langs: FlattenedLanguage[]): FlattenedLanguage =>
-    langs.find(l => l.language.key === 'curl') ?? langs[0] as FlattenedLanguage;
-
-const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, hasRequestBody, defaultContentType, security, exampleQueryParams, exampleHeaderParams }) => {
+const CodeExamples: React.FC<CodeExamplesProps> = ({
+    method, path, requestBody, hasRequestBody, defaultContentType,
+    security, exampleQueryParams, exampleHeaderParams,
+}) => {
     const { computedUrl, credentials, spec, preferredContentType } = useOpenAPIContext();
-    const [languages, setLanguages] = useState<FlattenedLanguage[]>([]);
-    const [selectedLanguage, setSelectedLanguage] = useState<FlattenedLanguage | null>(null);
+    const [selectedLang, setSelectedLang] = useState<Lang>(LANGUAGES[0]);
     const [snippet, setSnippet] = useState<string>('');
 
     useEffect(() => {
-        const langs: Language[] = getLanguageList();
-        const flattenedLanguages: FlattenedLanguage[] = langs.flatMap(lang =>
-            lang.variants.length > 0
-                ? lang.variants.map(variant => ({ language: lang, variant: variant.key }))
-                : [{ language: lang }]
-        );
-        setLanguages(flattenedLanguages);
-        if (flattenedLanguages.length > 0) {
-            setSelectedLanguage(findDefaultLanguage(flattenedLanguages));
-        }
-    }, []);
+        if (!computedUrl) return;
 
-    useEffect(() => {
-        if (!selectedLanguage || !computedUrl) return;
+        let cancelled = false;
 
-        try {
-            const { headers: authHeaders, queryParams } = resolveAuthHeaders(
-                security,
-                spec.components?.securitySchemes,
-                credentials,
-            );
+        (async () => {
+            try {
+                const { headers: authHeaders, queryParams } = resolveAuthHeaders(
+                    security,
+                    spec.components?.securitySchemes,
+                    credentials,
+                );
 
-            const mergedQueryParams = { ...exampleQueryParams, ...queryParams };
-            const urlWithQuery = Object.keys(mergedQueryParams).length
-                ? `${computedUrl}${path}?${new URLSearchParams(mergedQueryParams)}`
-                : `${computedUrl}${path}`;
+                const mergedQuery = { ...exampleQueryParams, ...queryParams };
+                const urlWithQuery = Object.keys(mergedQuery).length
+                    ? `${computedUrl}${path}?${new URLSearchParams(mergedQuery)}`
+                    : `${computedUrl}${path}`;
 
-            const contentType = preferredContentType ?? defaultContentType ?? 'application/json';
-            const allHeaders: HeaderDef[] = [
-                ...(exampleHeaderParams ?? []),
-                ...authHeaders,
-                ...(hasRequestBody ? [{ key: 'Content-Type', value: contentType }] : []),
-            ];
+                const contentType = preferredContentType ?? defaultContentType ?? 'application/json';
+                const allHeaders: HeaderDef[] = [
+                    ...(exampleHeaderParams ?? []),
+                    ...authHeaders,
+                    ...(hasRequestBody ? [{ key: 'Content-Type', value: contentType }] : []),
+                ];
 
-            const request = new postman.Request({
-                method: method.toUpperCase(),
-                url: urlWithQuery,
-                header: allHeaders,
-                ...(requestBody && {
-                    body: {
-                        mode: 'raw' as const,
-                        raw: requestBody,
-                        options: { raw: { language: 'json' as const } }
-                    }
-                })
-            });
+                const harRequest = {
+                    method: method.toUpperCase(),
+                    url: urlWithQuery,
+                    httpVersion: 'HTTP/1.1',
+                    headers: allHeaders.map(h => ({ name: h.key, value: h.value })),
+                    queryString: [] as { name: string; value: string }[],
+                    cookies: [] as { name: string; value: string }[],
+                    postData: hasRequestBody && requestBody
+                        ? { mimeType: contentType, text: requestBody }
+                        : undefined,
+                    headersSize: 0,
+                    bodySize: 0,
+                };
 
-            const handleConversion: ConvertCallback = (error, generatedSnippet) => {
-                if (error) {
-                    console.error('Snippet generation error:', error);
-                    setSnippet('Could not generate snippet');
-                    return;
+                const httpsnippet = new HTTPSnippet(harRequest);
+                const result = await httpsnippet.convert(selectedLang.target, selectedLang.client);
+                if (!cancelled) {
+                    const str = Array.isArray(result) ? (result[0] ?? '') : (result ?? '');
+                    setSnippet(str);
                 }
-                setSnippet(generatedSnippet);
-            };
+            } catch (e) {
+                console.error('[CodeExamples] snippet error:', e);
+                if (!cancelled) setSnippet('Could not generate snippet.');
+            }
+        })();
 
-            convert(
-                selectedLanguage.language.key,
-                selectedLanguage.variant || '',
-                request,
-                DEFAULT_REQUEST_OPTIONS,
-                handleConversion
-            );
-        } catch (error) {
-            console.error('Request creation error:', error);
-            setSnippet('Could not generate snippet');
-        }
-    }, [method, path, requestBody, hasRequestBody, selectedLanguage, computedUrl, credentials, security, spec, preferredContentType, exampleQueryParams, exampleHeaderParams]);
-
-    const handleSelectChange = (value: string) => {
-        const found = languages.find(l => getSelectKey(l) === value);
-        if (found) setSelectedLanguage(found);
-    };
+        return () => { cancelled = true; };
+    }, [method, path, requestBody, hasRequestBody, selectedLang, computedUrl, credentials, security, spec, preferredContentType, exampleQueryParams, exampleHeaderParams, defaultContentType]);
 
     return (
         <div className="space-y-4">
             <div className="flex justify-between items-center">
                 <h3 className="text-lg font-medium">Code Examples</h3>
                 <Select
-                    value={selectedLanguage ? getSelectKey(selectedLanguage) : undefined}
-                    onValueChange={handleSelectChange}
+                    value={selectedLang.label}
+                    onValueChange={v => {
+                        const found = LANGUAGES.find(l => l.label === v);
+                        if (found) setSelectedLang(found);
+                    }}
                 >
                     <SelectTrigger className="w-48">
-                        <SelectValue placeholder="Select language" />
+                        <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                        {languages.map((lang) => (
-                            <SelectItem key={getSelectKey(lang)} value={getSelectKey(lang)}>
-                                {lang.language.label}{lang.variant ? ` (${lang.variant})` : ''}
+                        {LANGUAGES.map(lang => (
+                            <SelectItem key={lang.label} value={lang.label}>
+                                {lang.label}
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -217,7 +174,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({ method, path, requestBody, 
             <div className="max-h-[60vh] overflow-y-auto rounded-lg">
                 <FormattedMarkdown
                     markdown={snippet}
-                    languageCode={selectedLanguage?.language.syntax_mode ?? ''}
+                    languageCode={selectedLang.syntax}
                     maxLines={20}
                     className="[&_code]:!whitespace-pre-wrap"
                 />
