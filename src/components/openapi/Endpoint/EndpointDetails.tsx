@@ -7,24 +7,51 @@ import { EnhancedOperationObject } from "@/types/openapi";
 import { getBadgeColor, findOperationByOperationIdAndTag, generateExample } from "@/utils/openapi";
 import { SchemaObject } from "@/types/unified-openapi-types";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
-import { ExternalLink, Lock, Copy, Check } from 'lucide-react';
+import { ExternalLink, Lock, Copy, Check, BookOpen, Play, Terminal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import CodeExamples from './CodeExamples';
 import ResponseViewer from './ResponseViewer';
 import ParametersViewer from './ParametersViewer';
 import RequestBodyViewer from "@/components/openapi/Endpoint/RequestBodyViewer";
 import CallbackViewer from "@/components/openapi/Endpoint/CallbackViewer";
+import PlaygroundForm from './PlaygroundForm';
+import PlaygroundResponse from './PlaygroundResponse';
+import { usePlayground } from '@/hooks/usePlayground';
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 
 interface EndpointContentProps {
     operation: EnhancedOperationObject;
 }
 
-const SectionCard: React.FC<{ title?: string; children: React.ReactNode }> = ({ title, children }) => (
+const SectionCard: React.FC<{ title?: string; action?: React.ReactNode; children: React.ReactNode }> = ({ title, action, children }) => (
     <div className="rounded-xl bg-muted/50 p-4 space-y-3">
-        {title && <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>}
+        {(title || action) && (
+            <div className="flex items-center justify-between">
+                {title && <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h3>}
+                {action}
+            </div>
+        )}
         {children}
     </div>
 );
+
+const CopyCurlButton: React.FC<{ curlCommand: string }> = ({ curlCommand }) => {
+    const [copied, setCopied] = useState(false);
+    const handleCopy = () => {
+        navigator.clipboard.writeText(curlCommand);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+    return (
+        <button
+            onClick={handleCopy}
+            className="flex items-center gap-1.5 text-[10px] font-mono px-2 py-1 rounded border border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+        >
+            {copied ? <Check className="h-3 w-3 text-green-500" /> : <Terminal className="h-3 w-3" />}
+            {copied ? 'Copied!' : 'Copy cURL'}
+        </button>
+    );
+};
 
 const CopyPathButton: React.FC<{ path: string }> = ({ path }) => {
     const [copied, setCopied] = useState(false);
@@ -45,7 +72,25 @@ const CopyPathButton: React.FC<{ path: string }> = ({ path }) => {
 };
 
 const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
-    const [requestValues] = useState({ parameters: {} as Record<string, string>, body: '' });
+    const [mode, setMode] = useState<'reference' | 'playground'>(() =>
+        new URLSearchParams(window.location.search).get('mode') === 'try' ? 'playground' : 'reference'
+    );
+
+    const syncUrl = (currentMode: 'reference' | 'playground') => {
+        const url = new URL(window.location.href);
+        if (currentMode === 'playground') url.searchParams.set('mode', 'try');
+        else url.searchParams.delete('mode');
+        window.history.replaceState({}, '', url.toString());
+    };
+
+    const handleModeChange = (newMode: 'reference' | 'playground') => {
+        setMode(newMode);
+        syncUrl(newMode);
+    };
+
+    React.useEffect(() => {
+        syncUrl(mode);
+    }, [operation.path, operation.method]); // eslint-disable-line react-hooks/exhaustive-deps
     const { parameters = [], requestBody, responses } = operation;
     const { spec } = useOpenAPIContext();
 
@@ -93,6 +138,14 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
     const effectiveSecurity = operation.security !== undefined ? operation.security : (spec.security ?? []);
     const requiresAuth = effectiveSecurity.length > 0;
 
+    const playground = usePlayground({
+        method: operation.method,
+        path: operation.path,
+        parameters,
+        security: effectiveSecurity as Record<string, string[]>[],
+        requestBody,
+    });
+
     const effectiveDescription = operation.description ?? operation.pathDescription;
     const effectiveSummary = operation.summary ?? operation.pathSummary;
 
@@ -119,83 +172,144 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                         Authentication Required
                     </Badge>
                 )}
-                {effectiveSummary && (
-                    <p className="w-full text-sm text-muted-foreground -mt-1">{effectiveSummary}</p>
-                )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 p-4">
-                {/* Left — Description, Parameters, Request Body */}
-                {hasLeft && (
-                    <div className={`${onlyDescription ? 'lg:col-span-5' : 'lg:col-span-3'} space-y-4`}>
-                        {hasDescription && (
-                            <section className="space-y-3 px-1">
-                                {operation.deprecated && (
-                                    <Alert variant="destructive">
-                                        <AlertDescription>
-                                            This endpoint is deprecated and might be removed in future versions.
-                                        </AlertDescription>
-                                    </Alert>
-                                )}
-                                {effectiveDescription && (
-                                    <div className="prose prose-slate dark:prose-invert max-w-none">
-                                        <FormattedMarkdown markdown={effectiveDescription} maxLength={1000} />
-                                    </div>
-                                )}
-                                {operation.externalDocs && (
-                                    <a
-                                        href={operation.externalDocs.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-1.5 text-sm text-blue-500 hover:underline"
-                                    >
-                                        <ExternalLink className="h-4 w-4" />
-                                        {operation.externalDocs.description || 'External Documentation'}
-                                    </a>
-                                )}
-                            </section>
-                        )}
-
-                        {parameters.length > 0 && (
-                            <SectionCard title="Parameters">
-                                <ParametersViewer parameters={parameters} />
-                            </SectionCard>
-                        )}
-
-                        {requestBody && (
-                            <SectionCard title="Request Body">
-                                <RequestBodyViewer requestBody={requestBody} />
-                            </SectionCard>
-                        )}
-
-                        {operation.callbacks && Object.keys(operation.callbacks).length > 0 && (
-                            <SectionCard title="Callbacks">
-                                <CallbackViewer callbacks={operation.callbacks} />
-                            </SectionCard>
-                        )}
+                <div className="w-full flex items-center justify-between gap-3 -mt-1">
+                    {effectiveSummary
+                        ? <p className="text-sm text-muted-foreground">{effectiveSummary}</p>
+                        : <span />}
+                    <div className="flex rounded-md border overflow-hidden text-xs shrink-0">
+                        <button
+                            onClick={() => handleModeChange('reference')}
+                            className={cn('w-28 flex items-center justify-center gap-1.5 py-1.5 transition-colors', mode === 'reference' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+                        >
+                            <BookOpen className="h-3.5 w-3.5" />
+                            Reference
+                        </button>
+                        <button
+                            onClick={() => handleModeChange('playground')}
+                            className={cn('w-28 flex items-center justify-center gap-1.5 py-1.5 transition-colors border-l', mode === 'playground' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted')}
+                        >
+                            <Play className="h-3.5 w-3.5" />
+                            Try it
+                        </button>
                     </div>
-                )}
-
-                {/* Right — Code Examples + Responses */}
-                <div className={`${!hasLeft || onlyDescription ? 'lg:col-span-5' : 'lg:col-span-2'} space-y-4`}>
-                    <SectionCard>
-                        <CodeExamples
-                            method={operation.method}
-                            path={examplePath}
-                            requestBody={requestValues.body || exampleBody}
-                            hasRequestBody={!!requestBody}
-                            defaultContentType={requestBody ? Object.keys(requestBody.content)[0] : undefined}
-                            security={operation.security}
-                            exampleQueryParams={exampleQueryParams}
-                            exampleHeaderParams={exampleHeaderParams}
-                        />
-                    </SectionCard>
-
-                    <SectionCard title="Responses">
-                        <ResponseViewer responses={responses} />
-                    </SectionCard>
                 </div>
             </div>
+
+            {mode === 'playground' ? (
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 p-4">
+                    <div className="lg:col-span-3 space-y-4">
+                        <div className="rounded-xl bg-muted/50 p-4">
+                            <PlaygroundForm
+                                parameters={parameters}
+                                requestBody={requestBody}
+                                pathValues={playground.pathValues}
+                                setPathValues={playground.setPathValues}
+                                queryValues={playground.queryValues}
+                                setQueryValues={playground.setQueryValues}
+                                headerValues={playground.headerValues}
+                                setHeaderValues={playground.setHeaderValues}
+                                body={playground.body}
+                                setBody={playground.setBody}
+                                contentType={playground.contentType}
+                                setContentType={playground.setContentType}
+                                contentTypes={playground.contentTypes}
+                                validationErrors={playground.validationErrors}
+                                enabledParams={playground.enabledParams}
+                                setParamEnabled={playground.setParamEnabled}
+                            />
+                        </div>
+                        <SectionCard title="Expected Responses">
+                            <ResponseViewer responses={responses} />
+                        </SectionCard>
+                    </div>
+                    <div className="lg:col-span-2">
+                        <SectionCard title="Response" action={<CopyCurlButton curlCommand={playground.curlCommand} />}>
+                            <PlaygroundResponse
+                                result={playground.result}
+                                loading={playground.loading}
+                                error={playground.error}
+                                previewUrl={playground.previewUrl}
+                                method={operation.method}
+                                expectedStatusCodes={Object.keys(responses ?? {})}
+                                onSend={playground.send}
+                            />
+                        </SectionCard>
+                    </div>
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 p-4">
+                    {/* Left — Description, Parameters, Request Body */}
+                    {hasLeft && (
+                        <div className={`${onlyDescription ? 'lg:col-span-5' : 'lg:col-span-3'} space-y-4`}>
+                            {hasDescription && (
+                                <section className="space-y-3 px-1">
+                                    {operation.deprecated && (
+                                        <Alert variant="destructive">
+                                            <AlertDescription>
+                                                This endpoint is deprecated and might be removed in future versions.
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
+                                    {effectiveDescription && (
+                                        <div className="prose prose-slate dark:prose-invert max-w-none">
+                                            <FormattedMarkdown markdown={effectiveDescription} maxLength={1000} />
+                                        </div>
+                                    )}
+                                    {operation.externalDocs && (
+                                        <a
+                                            href={operation.externalDocs.url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 text-sm text-blue-500 hover:underline"
+                                        >
+                                            <ExternalLink className="h-4 w-4" />
+                                            {operation.externalDocs.description || 'External Documentation'}
+                                        </a>
+                                    )}
+                                </section>
+                            )}
+
+                            {parameters.length > 0 && (
+                                <SectionCard title="Parameters">
+                                    <ParametersViewer parameters={parameters} />
+                                </SectionCard>
+                            )}
+
+                            {requestBody && (
+                                <SectionCard title="Request Body">
+                                    <RequestBodyViewer requestBody={requestBody} />
+                                </SectionCard>
+                            )}
+
+                            {operation.callbacks && Object.keys(operation.callbacks).length > 0 && (
+                                <SectionCard title="Callbacks">
+                                    <CallbackViewer callbacks={operation.callbacks} />
+                                </SectionCard>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Right — Code Examples + Responses */}
+                    <div className={`${!hasLeft || onlyDescription ? 'lg:col-span-5' : 'lg:col-span-2'} space-y-4`}>
+                        <SectionCard>
+                            <CodeExamples
+                                method={operation.method}
+                                path={examplePath}
+                                requestBody={exampleBody}
+                                hasRequestBody={!!requestBody}
+                                defaultContentType={requestBody ? Object.keys(requestBody.content)[0] : undefined}
+                                security={operation.security}
+                                exampleQueryParams={exampleQueryParams}
+                                exampleHeaderParams={exampleHeaderParams}
+                            />
+                        </SectionCard>
+
+                        <SectionCard title="Responses">
+                            <ResponseViewer responses={responses} />
+                        </SectionCard>
+                    </div>
+                </div>
+            )}
 
         </Card>
     );

@@ -12,7 +12,7 @@ import WebhookDetails from "@/components/openapi/WebhookDetails";
 const rootRoute = new RootRoute({
     component: () => (
         // See examples to test doc : https://apis.guru/
-        <SkuseDocumentation openApiUrl={"/test-spec.json"} />
+        <SkuseDocumentation openApiUrl={"https://demo.api-platform.com/docs.jsonopenapi"} />
     )
 });
 
