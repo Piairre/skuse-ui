@@ -8,7 +8,7 @@ interface SchemaBadgesProps {
     schema: SchemaObject;
 }
 
-const getTypeColorClass = (typeStr: string): string => {
+export const getTypeColorClass = (typeStr: string): string => {
     const t = typeStr.toLowerCase();
     if (t === 'unknown') return 'border-slate-200 dark:border-slate-600 text-muted-foreground';
     if (t === 'null') return 'border-slate-200 dark:border-slate-600 text-slate-400 dark:text-slate-500';
