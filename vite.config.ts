@@ -1,40 +1,46 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
-import type { UserConfig } from 'vite'
+import dts from 'vite-plugin-dts'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   define: {
-    'process.env': process.env
+    'process.env': {},
+    global: 'globalThis',
   },
-  plugins: [react()],
+  plugins: [
+    react(),
+    ...(mode === 'lib' ? [dts({ include: ['src'], insertTypesEntry: true })] : []),
+  ],
   resolve: {
     alias: {
-      "@": resolve(__dirname, "./src"),
+      '@': resolve(__dirname, './src'),
     },
   },
-  build: {
+  build: mode === 'lib' ? {
     lib: {
-      entry: resolve(__dirname, 'src/main.tsx'),
+      entry: resolve(__dirname, 'src/index.ts'),
       name: 'SkuseUI',
-      fileName: (format) => `skuse.${format}.js`
+      formats: ['es', 'cjs'],
+      fileName: (format) => `skuse-ui.${format}.js`,
     },
-    outDir: '../../public',
+    outDir: 'dist',
+    cssCodeSplit: false,
     rollupOptions: {
-      external: ['react', 'react-dom'],
+      external: ['react', 'react-dom', 'react/jsx-runtime'],
       output: {
         globals: {
           react: 'React',
-          'react-dom': 'ReactDOM'
+          'react-dom': 'ReactDOM',
+          'react/jsx-runtime': 'jsxRuntime',
         },
-        assetFileNames: (info): string => {
-          const { source, names = [''] } = info;
-          if (source && source.toString().includes('css')) {
-            return 'build/skuse.css';
-          }
-          return `build/${names[0]}`;
-        }
-      }
-    }
-  }
-} as UserConfig);
+        assetFileNames: (info) => {
+          if (info.names?.some(n => n.endsWith('.css'))) return 'style.css';
+          return info.names?.[0] ?? 'asset';
+        },
+      },
+    },
+  } : {
+    outDir: 'dist-app',
+  },
+}));
