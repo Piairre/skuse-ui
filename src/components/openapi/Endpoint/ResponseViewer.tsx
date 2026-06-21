@@ -205,6 +205,7 @@ const ResponseContent: React.FC<{ response: ResponseObject }> = ({ response }) =
                                 schema={schema}
                                 description={response.description}
                                 examples={response.content?.[activeContentType]?.examples}
+                                example={response.content?.[activeContentType]?.example}
                             />
                         )
                     ) : null}

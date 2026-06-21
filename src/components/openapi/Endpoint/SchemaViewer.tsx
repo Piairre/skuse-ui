@@ -18,6 +18,7 @@ interface SchemaViewerProps {
     contentType: string;
     description?: string;
     examples?: { [key: string]: ExampleObject };
+    example?: unknown;
 }
 
 const contentTypeToLanguage = (contentType: string): string => {
@@ -28,7 +29,7 @@ const contentTypeToLanguage = (contentType: string): string => {
     return 'text';
 };
 
-const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples, contentType }) => {
+const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples, example, contentType }) => {
     const [selectedExample, setSelectedExample] = useState<string | null>(() : string | null => {
         if (!examples || Object.keys(examples).length === 0) return null;
         return Object.keys(examples)[0] || null;
@@ -42,6 +43,7 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples, contentTy
     const getExampleValue = () => {
         if (examples && selectedExample) return examples[selectedExample]?.value;
         if (Array.isArray(schemaExamples) && schemaExamples.length > 0) return schemaExamples[schemaExampleIdx];
+        if (example !== undefined) return example;
         return schema?.example || generateExample(schema);
     };
 

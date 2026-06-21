@@ -40,6 +40,12 @@ const Information: React.FC = () => {
                     </div>
 
                     <div className="flex flex-wrap justify-start sm:justify-end items-center gap-x-4 gap-y-2 text-sm text-muted-foreground sm:shrink-0">
+                        {spec.info.contact?.name && (
+                            <span className="flex items-center gap-1.5">
+                                <Mail className="h-4 w-4" />
+                                {spec.info.contact.name}
+                            </span>
+                        )}
                         {spec.info.contact?.email && (
                             <a href={`mailto:${spec.info.contact.email}`}
                                className="flex items-center gap-1.5 hover:text-foreground transition-colors">
