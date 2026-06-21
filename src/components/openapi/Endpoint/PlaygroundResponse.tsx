@@ -40,7 +40,6 @@ interface PlaygroundResponseProps {
 const PlaygroundResponse: React.FC<PlaygroundResponseProps> = ({ result, loading, error, previewUrl, method, expectedStatusCodes, onSend }) => {
     const [headersOpen, setHeadersOpen] = useState(false);
     const resolved = useMemo(() => result ? resolveBody(result) : null, [result]);
-
     const urlRow = (url: string, m: string) => (
         <div className="flex items-center gap-2 min-w-0 rounded-md bg-muted/60 px-2.5 py-1.5">
             <Badge className={`${getBadgeColor(m.toLowerCase())} text-white font-mono text-[10px] px-2 py-0.5 shrink-0`}>

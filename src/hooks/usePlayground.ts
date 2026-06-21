@@ -248,8 +248,9 @@ export function usePlayground({ method, path, parameters, security, requestBody 
             if (hasBody) headers['Content-Type'] = contentType;
 
             const finalUrl = url.toString();
+            const fetchUrl = `https://proxy.scalar.com?scalar_url=${encodeURIComponent(finalUrl)}`;
             const start = performance.now();
-            const response = await fetch(finalUrl, {
+            const response = await fetch(fetchUrl, {
                 method,
                 headers,
                 body: hasBody ? body : undefined,
