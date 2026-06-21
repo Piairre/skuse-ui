@@ -96,6 +96,8 @@ export interface UnifiedOpenAPI {
         description?: string;
         url: string;
     };
+    webhooks?: PathsObject;
+    $defs?: Record<string, SchemaObject>; // OpenAPI 3.1
 }
 
 export interface OperationObject {
@@ -199,6 +201,19 @@ export interface SchemaObject {
     deprecated?: boolean;
     const?: any; // OpenAPI 3.1
     contentMediaType?: string; // OpenAPI 3.1
+    contentEncoding?: string; // OpenAPI 3.1
+    patternProperties?: { [pattern: string]: SchemaObject }; // OpenAPI 3.1
+    propertyNames?: SchemaObject; // OpenAPI 3.1
+    prefixItems?: SchemaObject[]; // OpenAPI 3.1 — tuple positional items
+    if?: SchemaObject; // OpenAPI 3.1 — conditional schema
+    then?: SchemaObject; // OpenAPI 3.1 — conditional schema
+    else?: SchemaObject; // OpenAPI 3.1 — conditional schema
+    contains?: SchemaObject; // OpenAPI 3.1 — array must contain at least one item matching this
+    minContains?: number; // OpenAPI 3.1
+    maxContains?: number; // OpenAPI 3.1
+    unevaluatedProperties?: boolean | SchemaObject; // OpenAPI 3.1
+    unevaluatedItems?: boolean | SchemaObject; // OpenAPI 3.1
+    $defs?: Record<string, SchemaObject>; // OpenAPI 3.1 — inline schema definitions
     $schema?: string; // OpenAPI 3.1
 }
 
@@ -378,9 +393,18 @@ export type SecuritySchemeObject =
     openIdConnectUrl: string;
 };
 
+export type AuthCredential =
+    | { type: 'bearer'; token: string }
+    | { type: 'basic'; username: string; password: string }
+    | { type: 'apiKey'; key: string; in: 'header' | 'query' | 'cookie'; name: string }
+    | { type: 'oauth2'; accessToken: string; tokenType: string; scope?: string; refreshToken?: string; clientId?: string }
+    | { type: 'openIdConnect'; accessToken: string };
+
 export interface EnhancedOperationObject extends OperationObject {
     path: string;
     method: HttpMethod;
+    pathSummary?: string;
+    pathDescription?: string;
 }
 
 export type TaggedOperationsMap = Record<string, EnhancedOperationObject[]>;

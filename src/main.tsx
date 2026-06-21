@@ -1,17 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
-import { OpenAPIProvider } from '@/hooks/OpenAPIContext';
-import { RouterProvider } from '@tanstack/react-router';
-import { router } from '@/router/routes';
-import {ThemeProvider} from "@/components/theme-provider";
+import { SkuseDocumentation } from './SkuseDocumentation'
 
+// See https://apis.guru/ for test specs
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
-        <ThemeProvider storageKey="skuse-ui-theme">
-            <OpenAPIProvider>
-                <RouterProvider router={router} />
-            </OpenAPIProvider>
-        </ThemeProvider>
+        <SkuseDocumentation openApiUrl="https://api.apis.guru/v2/specs/bunq.com/1.0/openapi.json" />
     </StrictMode>
 )

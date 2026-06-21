@@ -2,11 +2,21 @@ import React from 'react';
 import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import {cn} from "@/lib/utils";
-import {ResponseObject, SchemaObject, HeaderObject} from "@/types/unified-openapi-types";
+import {ResponseObject, SchemaObject, HeaderObject, LinkObject} from "@/types/unified-openapi-types";
 import SchemaViewer from './SchemaViewer';
 import {Card, CardContent, CardHeader, CardTitle} from "@/components/ui/card";
 import {Badge} from "@/components/ui/badge";
-import {renderSchemaType, isEmptySchema} from "@/utils/openapi";
+import {renderSchemaType, isEmptySchema, groupEndpointsByTags, getOperationId} from "@/utils/openapi";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
+import { useNavigate } from '@tanstack/react-router';
+import { ArrowRight } from 'lucide-react';
 
 interface ResponseViewerProps {
     responses: { [code: string]: ResponseObject }
@@ -60,16 +70,16 @@ const HeaderViewer: React.FC<HeaderViewerProps> = ({headers}) => {
                                 <span className="font-mono text-sm">{name}</span>
                                 {header.required && (
                                     <Badge variant="outline"
-                                           className="text-xs bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
+                                           className="text-[10px] px-1.5 py-0 h-4 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800">
                                         required
                                     </Badge>
                                 )}
-                                <Badge variant="outline" className="text-xs">
-                                    { (header.type || header.schema) ? (header.schema ? renderSchemaType(header.schema) : 'unknown') : '' }
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                                    {(header.type || header.schema) ? (header.schema ? renderSchemaType(header.schema) : 'unknown') : ''}
                                 </Badge>
                                 {header.schema?.pattern && (
                                     <Badge variant="outline"
-                                           className="text-xs bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                                           className="text-[10px] px-1.5 py-0 h-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
                                         pattern
                                     </Badge>
                                 )}
@@ -93,154 +103,161 @@ const HeaderViewer: React.FC<HeaderViewerProps> = ({headers}) => {
     );
 };
 
-const StatusTab: React.FC<{
-    code: string;
-    isActive: boolean;
-}> = ({code, isActive}) => {
-    const statusType = code.charAt(0) as keyof typeof STATUS_STYLES;
-    const styles = STATUS_STYLES[statusType] ?? STATUS_STYLES['5'];
+const ResponseLinks: React.FC<{ links: Record<string, LinkObject> }> = ({ links }) => {
+    const { spec } = useOpenAPIContext();
+    const navigate = useNavigate();
+
+    const findRoute = (operationId: string) => {
+        const grouped = groupEndpointsByTags(spec.paths);
+        for (const [tag, ops] of Object.entries(grouped)) {
+            const op = ops.find(o => o.operationId === operationId);
+            if (op) return { tag, operationIdentifier: getOperationId(op) };
+        }
+        return null;
+    };
 
     return (
-        <TabsTrigger
-            value={code}
-            className={cn(
-                "flex-1 transition-colors font-medium",
-                styles.base,
-                styles.hover,
-                isActive && styles.active
-            )}
-        >
-            {code}
-        </TabsTrigger>
+        <div className="space-y-2 pt-1">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">See also</p>
+            <div className="flex flex-wrap gap-2">
+                {Object.entries(links).map(([name, link]) => {
+                    const route = link.operationId ? findRoute(link.operationId) : null;
+                    return (
+                        <button
+                            key={name}
+                            title={link.description}
+                            onClick={() => route && navigate({ to: '/$tag/$operationIdentifier', params: route })}
+                            className={cn(
+                                "flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors",
+                                route
+                                    ? "border-primary/50 text-primary hover:bg-primary/10 cursor-pointer"
+                                    : "border-muted-foreground/30 text-muted-foreground cursor-default"
+                            )}
+                        >
+                            <ArrowRight className="h-3 w-3 shrink-0" />
+                            {name}
+                        </button>
+                    );
+                })}
+            </div>
+        </div>
     );
 };
 
+const ResponseContent: React.FC<{ response: ResponseObject }> = ({ response }) => {
+    const { preferredContentType, setPreferredContentType } = useOpenAPIContext();
+    const contentTypes = response.content ? Object.keys(response.content) : [];
+
+    const resolve = () => preferredContentType && contentTypes.includes(preferredContentType)
+        ? preferredContentType
+        : (contentTypes[0] ?? '');
+
+    const [activeContentType, setActiveContentType] = React.useState<string>(resolve);
+
+    React.useEffect(() => {
+        setActiveContentType(resolve());
+    }, [response, preferredContentType]);
+
+    const handleSelect = (ct: string) => {
+        setActiveContentType(ct);
+        setPreferredContentType(ct);
+    };
+
+    const schema = activeContentType ? response.content?.[activeContentType]?.schema as SchemaObject | undefined : undefined;
+
+    return (
+        <div className="space-y-4">
+            {response.description && (
+                <div className="prose dark:prose-invert max-w-none">
+                    <FormattedMarkdown markdown={response.description} />
+                </div>
+            )}
+
+            {response.headers && <HeaderViewer headers={response.headers} />}
+
+            {response.links && Object.keys(response.links).length > 0 && (
+                <ResponseLinks links={response.links} />
+            )}
+
+            {contentTypes.length > 0 ? (
+                <div className="space-y-3">
+                    {contentTypes.length > 1 ? (
+                        <Select value={activeContentType} onValueChange={handleSelect}>
+                            <SelectTrigger className="w-48 h-7 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {contentTypes.map(ct => (
+                                    <SelectItem key={ct} value={ct} className="text-xs">{ct}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    ) : (
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono">{contentTypes[0]}</Badge>
+                    )}
+
+                    {schema ? (
+                        isEmptySchema(schema) ? (
+                            <p className="text-sm text-muted-foreground italic">No schema defined.</p>
+                        ) : (
+                            <SchemaViewer
+                                contentType={activeContentType}
+                                schema={schema}
+                                description={response.description}
+                                examples={response.content?.[activeContentType]?.examples}
+                                example={response.content?.[activeContentType]?.example}
+                            />
+                        )
+                    ) : null}
+                </div>
+            ) : !response.headers && (
+                <p className="text-sm text-muted-foreground italic">No response body.</p>
+            )}
+        </div>
+    );
+};
 
 const ResponseViewer: React.FC<ResponseViewerProps> = ({responses}) => {
     const responseKeys = React.useMemo(() => responses ? Object.keys(responses) : [], [responses]);
-    const defaultTab = responseKeys.length > 0 ? responseKeys[0] as string : '';
-    const [activeTab, setActiveTab] = React.useState<string>(defaultTab);
-    const [activeContentType, setActiveContentType] = React.useState<string | null>(null);
-
-    const getContentTypes = (response: ResponseObject): string[] => {
-        if (!response.content) return [];
-        return Object.keys(response.content);
-    };
+    const [activeTab, setActiveTab] = React.useState<string>(responseKeys[0] ?? '');
 
     React.useEffect(() => {
-        if (responseKeys.length > 0) {
-            if (!responseKeys.includes(activeTab)) {
-                setActiveTab(responseKeys[0] as string);
-            }
+        if (responseKeys.length > 0 && !responseKeys.includes(activeTab)) {
+            setActiveTab(responseKeys[0] as string);
         }
     }, [responses, activeTab, responseKeys]);
-
-    React.useEffect(() => {
-        if (!responses) return;
-        const currentResponse = responses[activeTab];
-        if (currentResponse) {
-            const contentTypes = getContentTypes(currentResponse);
-            const firstContentType = contentTypes.length > 0 ? contentTypes[0] : null;
-            if (firstContentType !== undefined) {
-                setActiveContentType(firstContentType);
-            }
-        }
-    }, [activeTab, responses]);
 
     if (!responses || responseKeys.length === 0) return null;
 
     return (
-        <div className="space-y-6">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="w-full flex-wrap justify-center gap-2 h-auto p-1 bg-muted">
-                    {Object.entries(responses).map(([code]) => (
-                        <StatusTab
-                            key={code}
-                            code={code}
-                            isActive={activeTab === code}
-                        />
-                    ))}
-                </TabsList>
-
-                {Object.entries(responses).map(([code, response]) => {
-                    const contentTypes = getContentTypes(response);
-
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="w-full flex-wrap justify-center gap-2 h-auto p-1 bg-muted">
+                {Object.entries(responses).map(([code]) => {
+                    const statusType = code.charAt(0) as keyof typeof STATUS_STYLES;
+                    const styles = STATUS_STYLES[statusType] ?? STATUS_STYLES['5'];
                     return (
-                        <TabsContent key={code} value={code} className="mt-4">
-                            <div className="space-y-4">
-                                {response.description && (
-                                    <div className="prose dark:prose-invert max-w-none">
-                                        <FormattedMarkdown markdown={response.description}/>
-                                    </div>
-                                )}
-
-                                {response.headers && (
-                                    <HeaderViewer headers={response.headers}/>
-                                )}
-
-                                {contentTypes.length === 0 ? null : (
-                                    <>
-                                        {contentTypes.length > 1 && activeContentType ? (
-                                            <Tabs
-                                                value={activeContentType}
-                                                onValueChange={setActiveContentType}
-                                                className="w-full"
-                                            >
-                                                <TabsList className="w-full h-auto bg-muted">
-                                                    {contentTypes.map(contentType => (
-                                                        <TabsTrigger
-                                                            key={contentType}
-                                                            value={contentType}
-                                                            className="flex-1 text-sm"
-                                                        >
-                                                            {contentType}
-                                                        </TabsTrigger>
-                                                    ))}
-                                                </TabsList>
-
-                                                {contentTypes.map(contentType => {
-                                                    const content = response.content?.[contentType];
-                                                    if (!content?.schema) return null;
-
-                                                    return (
-                                                        <TabsContent key={contentType} value={contentType}>
-                                                            {isEmptySchema(content.schema) ? (
-                                                                <p className="text-sm text-muted-foreground italic">No schema defined.</p>
-                                                            ) : (
-                                                                <SchemaViewer
-                                                                    contentType={contentType}
-                                                                    schema={content.schema}
-                                                                    description={response.description}
-                                                                    examples={content.examples}
-                                                                />
-                                                            )}
-                                                        </TabsContent>
-                                                    );
-                                                })}
-                                            </Tabs>
-                                        ) : contentTypes[0] && response.content?.[contentTypes[0]]?.schema ? (
-                                            (() => {
-                                                const schema = response.content?.[contentTypes[0]]?.schema as SchemaObject;
-                                                return isEmptySchema(schema) ? (
-                                                    <p className="text-sm text-muted-foreground italic">No schema defined.</p>
-                                                ) : (
-                                                    <SchemaViewer
-                                                        contentType={contentTypes[0]}
-                                                        schema={schema}
-                                                        description={response.description}
-                                                        examples={response.content?.[contentTypes[0]]?.examples}
-                                                    />
-                                                );
-                                            })()
-                                        ) : null}
-                                    </>
-                                )}
-                            </div>
-                        </TabsContent>
+                        <TabsTrigger
+                            key={code}
+                            value={code}
+                            className={cn(
+                                "flex-1 transition-colors font-medium",
+                                styles.base,
+                                styles.hover,
+                                activeTab === code && styles.active
+                            )}
+                        >
+                            {code}
+                        </TabsTrigger>
                     );
                 })}
-            </Tabs>
-        </div>
+            </TabsList>
+
+            {Object.entries(responses).map(([code, response]) => (
+                <TabsContent key={code} value={code} className="mt-4">
+                    <ResponseContent response={response} />
+                </TabsContent>
+            ))}
+        </Tabs>
     );
 };
 

@@ -1,42 +1,63 @@
-# 🎨 Skuse UI
+# Skuse UI
 
-> 💡 Pronounced "skews" `/skjuːz/`
+> Pronounced "skews" `/skjuːz/`
 
-## 🌈 What is Skuse?
+A modern, beautiful alternative to Swagger UI — fully compatible with the OpenAPI 3.0 and 3.1 specification.
 
-Skuse is a modern and user-friendly alternative to Swagger UI, while maintaining 100% compatibility with the OpenAPI specification. Our goal ? Making your API documentation as beautiful as it is functional ! ✨
+## Installation
 
-## 🤔 Why "Skuse"?
+```bash
+npm install skuse-ui
+# or
+pnpm add skuse-ui
+```
 
-The name "Skuse" is inspired by [this iconic viral moment](https://www.instagram.com/p/C7rs1Bit36b/) from French comedy legend Laurent Baffie. Just like him, we want to bring some fun and originality !
+## Usage
 
-## 🚧 Project Status
+```tsx
+import { SkuseDocumentation } from 'skuse-ui';
+import 'skuse-ui/style.css';
 
-⚠️ The project is currently under active development. No releases are available yet, but we're working hard to bring you something really awesome !
+export default function App() {
+    return (
+        <SkuseDocumentation openApiUrl="https://your-api.com/openapi.json" />
+    );
+}
+```
 
-## ✨ Planned Features
+### Props
 
-- 🎯 Modern and intuitive user interface
-- 🚀 Smooth and fast navigation
-- 📱 Responsive design
-- 🔍 Advanced search capabilities
-- 🛠️ Deep customization options
-- 🤝 Full OpenAPI compatibility
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `openApiUrl` | `string` | — | URL of the OpenAPI JSON/YAML spec to load |
+| `theme` | `'light' \| 'dark' \| 'system'` | `'system'` | Color theme |
 
-## 🔜 Coming Soon
+## Features
 
-Stay tuned ! We're cooking up some amazing features that will make your API documentation more enjoyable than ever.
+- **Reference** — browse endpoints grouped by tags, with parameters, request bodies, response schemas, example values and code snippets in 15 languages
+- **Try It** — interactive playground to send real requests, with auth injection, live URL preview, copy cURL and a response viewer
+- **Models** — standalone schema browser
+- **Webhooks** — OAS 3.1 webhooks support
+- **Light / dark mode**
 
-## 🤝 Contributing
+## Project Status
 
-The project isn't open to external contributions yet, but keep an eye on this repo - we'll soon open the doors to enthusiastic contributors !
+Under active development — no public release yet.
 
-## 📝 License
+## Acknowledgements
+
+The API playground routes requests through [Scalar's open-source proxy](https://github.com/scalar/scalar/tree/main/projects/proxy-scalar-com) (`proxy.scalar.com`) to handle cross-origin requests from the browser. Thanks to the Scalar team for building and hosting it!
+
+## Why "Skuse"?
+
+The name is inspired by [this iconic viral moment](https://www.instagram.com/p/C7rs1Bit36b/) from French comedy legend Laurent Baffie.
+
+## License
 
 [MIT License](LICENSE)
 
 ---
 
 <div style="text-align: center">
-🌟 Made with ❤️ by the Skuse team 🌟
+Made with ❤️ by the Skuse team
 </div>

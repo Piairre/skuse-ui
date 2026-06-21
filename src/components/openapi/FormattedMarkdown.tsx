@@ -10,6 +10,7 @@ interface MarkdownRendererProps {
     className?: string;
     style?: CSSProperties;
     maxLength?: number;
+    maxLines?: number;
     languageCode?: string;
 }
 
@@ -77,6 +78,7 @@ export default function FormattedMarkdown({
                                               className,
                                               style,
                                               maxLength,
+                                              maxLines,
                                               languageCode
                                           }: MarkdownRendererProps) {
     const [isExpanded, setIsExpanded] = useState(false);
@@ -84,16 +86,16 @@ export default function FormattedMarkdown({
     useHashLinkFix();
 
     if (languageCode === 'json') {
-        // reformating json to be more readable
         markdown = JSON.stringify(JSON.parse(markdown), null, 2);
     }
 
-    // Format the content based on languageCode if provided
     const formattedContent = languageCode
         ? "```" + languageCode + "\n" + markdown + "\n```"
         : markdown;
 
-    // Determine if content should be truncated
+    const lineCount = markdown.split('\n').length;
+    const shouldCollapseLines = !!maxLines && lineCount > maxLines;
+
     const shouldTruncate = maxLength && formattedContent.length > maxLength && !isExpanded;
     const displayContent = shouldTruncate
         ? formattedContent.slice(0, maxLength) + "..."
@@ -101,43 +103,48 @@ export default function FormattedMarkdown({
 
     const handleExpand = async () => {
         setIsLoading(true);
-        // Simulate a small delay to show the loading state
         await new Promise(resolve => setTimeout(resolve, 300));
         setIsExpanded(true);
         setIsLoading(false);
     };
 
+    const preview = (
+        <MarkdownPreview
+            source={displayContent}
+            rehypePlugins={[
+                [rehypeSanitize, {
+                    ...defaultSchema,
+                    attributes: {
+                        ...defaultSchema.attributes,
+                        a: [...(defaultSchema.attributes?.a || []), 'class'],
+                        svg: ['className', 'hidden', 'viewBox', 'fill', 'height', 'width', 'aria-hidden', 'version'],
+                        path: ['fill-rule', 'd'],
+                        div: ['className', 'class', 'data-code', ...(defaultSchema.attributes?.div || [])],
+                    },
+                    tagNames: [...(defaultSchema.tagNames || []), 'a', 'svg', 'path', 'div'],
+                }],
+                [rehypeExternalLinks, { target: '_blank', rel: ['noopener', 'noreferrer'] }]
+            ]}
+            style={{ backgroundColor: 'transparent', ...style }}
+            className={className}
+        />
+    );
+
+    if (shouldCollapseLines) {
+        return (
+            <div
+                className="overflow-y-auto"
+                style={{ maxHeight: `${maxLines * 1.5}rem` }}
+            >
+                {preview}
+            </div>
+        );
+    }
+
     return (
         <div className="relative">
             <div className={shouldTruncate ? "relative" : undefined}>
-                <MarkdownPreview
-                    source={displayContent}
-                    rehypePlugins={[
-                        [
-                            rehypeSanitize, {
-                            ...defaultSchema,
-                            attributes: {
-                                ...defaultSchema.attributes,
-                                a: [...(defaultSchema.attributes?.a || []), 'class'],
-                                svg: ['className', 'hidden', 'viewBox', 'fill', 'height', 'width', 'aria-hidden', 'version'],
-                                path: ['fill-rule', 'd'],
-                                div: ['className', 'class', 'data-code', ...(defaultSchema.attributes?.div || [])],
-                            },
-                            tagNames: [
-                                ...(defaultSchema.tagNames || []), 'a', 'svg', 'path', 'div'
-                            ],
-                        },
-                        ],
-                        [
-                            rehypeExternalLinks, {
-                            target: '_blank',
-                            rel: ['noopener', 'noreferrer']
-                        }
-                        ]
-                    ]}
-                    style={{ backgroundColor: 'transparent', ...style }}
-                    className={className}
-                />
+                {preview}
                 {shouldTruncate && (
                     <div className="absolute bottom-0 left-0 w-full h-24 bg-gradient-to-t from-white dark:from-black to-transparent" />
                 )}
@@ -150,14 +157,7 @@ export default function FormattedMarkdown({
                         disabled={isLoading}
                         className="rounded-full px-6 bg-white dark:bg-black shadow-md hover:shadow-lg transition-shadow"
                     >
-                        {isLoading ? (
-                            <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Loading...
-                            </>
-                        ) : (
-                            'See more'
-                        )}
+                        {isLoading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Loading...</> : 'See more'}
                     </Button>
                 </div>
             )}

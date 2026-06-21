@@ -2,6 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Radix Dialog sets pointer-events: none on <body> when open.
+   The Sonner toaster must opt out so toasts remain interactive. */
+[data-sonner-toaster] {
+    pointer-events: auto !important;
+}
+
 @layer base {
     :root {
         --background: 0 0% 100%;

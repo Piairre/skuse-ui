@@ -1,21 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useOpenAPIContext } from './OpenAPIContext';
 import { resolveOpenAPIDocument } from "@/utils/openapi";
 import {OpenAPIInputDocument, ServerObject, UnifiedOpenAPI} from "@/types/unified-openapi-types";
 
-const getCurrentUrl = () => `${window.location.protocol}//${window.location.host}`;
-
-const calculateInitialUrl = (spec: UnifiedOpenAPI) => {
+const calculateInitialUrl = (spec: UnifiedOpenAPI, specFetchUrl: string) => {
     if (!spec.servers || spec.servers.length === 0) {
-        return getCurrentUrl();
+        return new URL('/', specFetchUrl).origin;
     }
 
     const firstServer = spec.servers[0] as ServerObject;
     let url = firstServer.url;
-
-    if (url === '/') {
-        return getCurrentUrl();
-    }
 
     if (firstServer.variables) {
         Object.entries(firstServer.variables).forEach(([key, value]) => {
@@ -23,10 +17,15 @@ const calculateInitialUrl = (spec: UnifiedOpenAPI) => {
         });
     }
 
+    // Resolve relative URLs against the spec's fetch origin
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return new URL(url, specFetchUrl).href.replace(/\/$/, '');
+    }
+
     return url;
 };
 
-export function useSpec({ openApiUrl }: { openApiUrl: string }) {
+export function useSpec({ openApiUrl, updateTitle = false }: { openApiUrl: string; updateTitle?: boolean }) {
     const {
         spec,
         setSpec,
@@ -37,6 +36,12 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
         setComputedUrl,
         setServerVariables
     } = useOpenAPIContext();
+
+    const [retryCount, setRetryCount] = useState(0);
+    const retry = () => {
+        setError(null);
+        setRetryCount(c => c + 1);
+    };
 
     useEffect(() => {
         async function fetchSpec() {
@@ -51,13 +56,13 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
                 const rawSpec: OpenAPIInputDocument = await response.json();
                 const resolvedSpec = resolveOpenAPIDocument(rawSpec);
 
-                if (resolvedSpec?.info?.title) {
-                    document.title = `${resolvedSpec.info.title} - Skuse UI`;
-                } else {
-                    document.title = 'API Docs - Skuse UI';
+                if (updateTitle) {
+                    document.title = resolvedSpec?.info?.title
+                        ? `${resolvedSpec.info.title} - Skuse UI`
+                        : 'API Docs - Skuse UI';
                 }
 
-                const initialUrl = calculateInitialUrl(resolvedSpec);
+                const initialUrl = calculateInitialUrl(resolvedSpec, openApiUrl);
                 setComputedUrl(initialUrl);
 
                 if (resolvedSpec.servers?.[0]?.variables) {
@@ -77,7 +82,7 @@ export function useSpec({ openApiUrl }: { openApiUrl: string }) {
         }
 
         fetchSpec();
-    }, [openApiUrl, setSpec, setLoading, setError, setComputedUrl, setServerVariables]);
+    }, [openApiUrl, retryCount, setSpec, setLoading, setError, setComputedUrl, setServerVariables]);
 
-    return { spec, loading, error };
+    return { spec, loading, error, retry };
 }

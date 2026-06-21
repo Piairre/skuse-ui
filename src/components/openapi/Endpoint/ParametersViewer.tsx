@@ -1,6 +1,5 @@
 import React from 'react';
 import {Badge} from "@/components/ui/badge";
-import {Tabs, TabsContent, TabsList, TabsTrigger} from "@/components/ui/tabs";
 import {Collapsible, CollapsibleContent, CollapsibleTrigger} from "@/components/ui/collapsible";
 import {ChevronRight} from 'lucide-react';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
@@ -9,32 +8,18 @@ import SchemaBadges from "@/components/openapi/Endpoint/SchemaBadges";
 
 type ParameterLocation = 'query' | 'path' | 'header' | 'cookie';
 
+const LOCATION_ORDER: ParameterLocation[] = ['path', 'query', 'header', 'cookie'];
+
+const LOCATION_STYLES: Record<ParameterLocation, string> = {
+    path:   'border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/40',
+    query:  'border-sky-200 dark:border-sky-800 text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40',
+    header: 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-900/40',
+    cookie: 'border-pink-200 dark:border-pink-800 text-pink-700 dark:text-pink-300 bg-pink-50 dark:bg-pink-950/40',
+};
+
 interface ParametersViewerProps {
     parameters: ParameterObject[];
 }
-
-const LocationTab: React.FC<{
-    location: ParameterLocation;
-    isActive: boolean;
-    count: number;
-}> = ({ location, count }) => {
-    return (
-        <TabsTrigger
-            value={location}
-            className="flex-1 flex items-center gap-1.5 py-2"
-        >
-            <div className="relative ps-0.5">
-                <span className="capitalize">{location}</span>
-                <Badge
-                    variant="outline"
-                    className="ml-0.5 translate-y-[-8px] px-1 py-0 text-[10px] min-w-[16px] h-3.5 inline-flex items-center justify-center leading-none"
-                >
-                    {count}
-                </Badge>
-            </div>
-        </TabsTrigger>
-    );
-};
 
 const NestedProperties: React.FC<{
     schema: SchemaObject;
@@ -101,6 +86,7 @@ const ParameterProperty: React.FC<{
 }> = ({ parameter, isRoot = false }) => {
     const [isOpen, setIsOpen] = React.useState(isRoot);
     const schema = parameter.schema;
+    const location = parameter.in as ParameterLocation;
 
     const hasChildren =
         (schema?.type === 'object' && !!schema.properties) ||
@@ -109,19 +95,13 @@ const ParameterProperty: React.FC<{
         (Array.isArray(schema?.anyOf) && schema.anyOf.length > 0) ||
         (Array.isArray(schema?.allOf) && schema.allOf.length > 0);
 
-
     const renderEnumBadges = () => {
         if (!schema?.enum) return null;
-
         return (
-            <div className="flex flex-wrap items-center gap-1 mt-1">
+            <div className="flex flex-wrap items-center gap-1 mt-1" onClick={e => e.stopPropagation()}>
                 <span className="text-xs text-gray-600 dark:text-gray-400">enum:</span>
                 {schema.enum.map((value, i) => (
-                    <Badge
-                        key={i}
-                        variant="outline"
-                        className="text-xs bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800"
-                    >
+                    <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800">
                         {JSON.stringify(value)}
                     </Badge>
                 ))}
@@ -129,40 +109,60 @@ const ParameterProperty: React.FC<{
         );
     };
 
+    const isDeprecated = parameter.deprecated === true;
+
+    const inner = (
+        <div className={`flex flex-col gap-1 text-left ${isDeprecated ? 'opacity-60' : ''}`}>
+            <div className="flex items-center gap-2 flex-wrap">
+                <span className={`font-mono text-sm text-gray-900 dark:text-gray-100 ${isDeprecated ? 'line-through' : ''}`}>
+                    {parameter.name}{parameter.required && <span className="text-red-500 ml-0.5">*</span>}
+                </span>
+                {isDeprecated && (
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-normal border-slate-300 text-slate-500">
+                        deprecated
+                    </Badge>
+                )}
+                {isRoot && location && LOCATION_STYLES[location] && (
+                    <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 font-normal ${LOCATION_STYLES[location]}`}>
+                        {location}
+                    </Badge>
+                )}
+                <div className="flex flex-wrap gap-1 items-center">
+                    {schema && <SchemaBadges schema={schema} />}
+                </div>
+            </div>
+            {(parameter.description || schema?.enum) && (
+                <div className="space-y-1" onClick={e => e.stopPropagation()}>
+                    {parameter.description && (
+                        <FormattedMarkdown
+                            className="!text-xs !text-gray-600 dark:!text-gray-400"
+                            markdown={parameter.description}
+                        />
+                    )}
+                    {renderEnumBadges()}
+                </div>
+            )}
+        </div>
+    );
+
     return (
         <div className="py-1">
             <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-                <CollapsibleTrigger className="group flex items-start gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded">
-                    {hasChildren && (
-                        <ChevronRight className="h-4 w-4 mt-1 shrink-0 text-gray-500 dark:text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
-                    )}
-                    <div className="flex flex-col gap-1 text-left">
-                        <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm text-gray-900 dark:text-gray-100">
-                                {parameter.name}{parameter.required && <span className="text-red-500 ml-0.5">*</span>}
-                            </span>
-                            <div className="flex flex-wrap gap-1 items-center">
-                                {schema && <SchemaBadges schema={schema} />}
-                            </div>
-                        </div>
-                        {(parameter.description || schema?.enum) && (
-                            <div className="space-y-1">
-                                {parameter.description && (
-                                    <FormattedMarkdown
-                                        className="!text-xs !text-gray-600 dark:!text-gray-400"
-                                        markdown={parameter.description}
-                                    />
-                                )}
-                                {renderEnumBadges()}
-                            </div>
-                        )}
+                {hasChildren ? (
+                    <>
+                        <CollapsibleTrigger className="group flex items-start gap-2 w-full hover:bg-slate-50 dark:hover:bg-slate-800 p-2 rounded">
+                            <ChevronRight className="h-4 w-4 mt-1 shrink-0 text-gray-500 dark:text-gray-400 group-data-[state=open]:rotate-90 transition-transform" />
+                            {inner}
+                        </CollapsibleTrigger>
+                        <CollapsibleContent className="ml-6">
+                            <NestedProperties schema={schema!} parameterLocation={location} />
+                        </CollapsibleContent>
+                    </>
+                ) : (
+                    <div className="flex items-start gap-2 p-2">
+                        <div className="w-4 shrink-0" />
+                        {inner}
                     </div>
-                </CollapsibleTrigger>
-
-                {hasChildren && schema && (
-                    <CollapsibleContent className="ml-6">
-                        <NestedProperties schema={schema} parameterLocation={parameter.in as ParameterLocation} />
-                    </CollapsibleContent>
                 )}
             </Collapsible>
         </div>
@@ -170,26 +170,11 @@ const ParameterProperty: React.FC<{
 };
 
 const ParametersViewer: React.FC<ParametersViewerProps> = ({ parameters }) => {
-    const groupedParameters = React.useMemo(() => {
-        return parameters.reduce((acc, param) => {
-            const location = param.in as ParameterLocation;
-            if (!acc[location]) {
-                acc[location] = [];
-            }
-            acc[location].push(param);
-            return acc;
-        }, {} as Record<ParameterLocation, ParameterObject[]>);
-    }, [parameters]);
-
-    const locations = Object.keys(groupedParameters) as ParameterLocation[];
-    const defaultLocation = locations[0];
-    const [activeLocation, setActiveLocation] = React.useState<ParameterLocation | null>(defaultLocation || null);
-
-    React.useEffect(() => {
-        if (!locations.includes(activeLocation as ParameterLocation) && locations.length > 0) {
-            setActiveLocation(locations[0] as ParameterLocation);
-        }
-    }, [locations, activeLocation]);
+    const sorted = React.useMemo(() =>
+        [...parameters].sort((a, b) =>
+            LOCATION_ORDER.indexOf(a.in as ParameterLocation) - LOCATION_ORDER.indexOf(b.in as ParameterLocation)
+        ),
+    [parameters]);
 
     if (parameters.length === 0) {
         return (
@@ -200,31 +185,14 @@ const ParametersViewer: React.FC<ParametersViewerProps> = ({ parameters }) => {
     }
 
     return (
-        <div className="space-y-6">
-            <Tabs value={activeLocation || ''} onValueChange={(value) => setActiveLocation(value as ParameterLocation)} className="w-full">
-                <TabsList className="w-full justify-center gap-2 h-auto p-1 bg-muted">
-                    {locations.map((location) => (
-                        <LocationTab
-                            key={location}
-                            location={location}
-                            isActive={activeLocation === location}
-                            count={groupedParameters[location].length}
-                        />
-                    ))}
-                </TabsList>
-
-                {locations.map((location) => (
-                    <TabsContent key={location} value={location}>
-                        {groupedParameters[location].map((parameter, index) => (
-                            <ParameterProperty
-                                key={`${parameter.name}-${index}`}
-                                parameter={parameter}
-                                isRoot={true}
-                            />
-                        ))}
-                    </TabsContent>
-                ))}
-            </Tabs>
+        <div className="divide-y divide-border/60">
+            {sorted.map((parameter, index) => (
+                <ParameterProperty
+                    key={`${parameter.name}-${index}`}
+                    parameter={parameter}
+                    isRoot={true}
+                />
+            ))}
         </div>
     );
 };

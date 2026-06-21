@@ -18,20 +18,32 @@ interface SchemaViewerProps {
     contentType: string;
     description?: string;
     examples?: { [key: string]: ExampleObject };
+    example?: unknown;
 }
 
-const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples }) => {
+const contentTypeToLanguage = (contentType: string): string => {
+    if (contentType.includes('json')) return 'json';
+    if (contentType.includes('xml')) return 'xml';
+    if (contentType.includes('yaml')) return 'yaml';
+    if (contentType.includes('html')) return 'html';
+    return 'text';
+};
+
+const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples, example, contentType }) => {
     const [selectedExample, setSelectedExample] = useState<string | null>(() : string | null => {
         if (!examples || Object.keys(examples).length === 0) return null;
         return Object.keys(examples)[0] || null;
     });
 
+    const schemaExamples = schema?.examples as unknown[] | undefined;
+    const [schemaExampleIdx, setSchemaExampleIdx] = useState(0);
+
     const [expandState, setExpandState] = useState<{ version: number; allOpen: boolean }>({ version: 0, allOpen: false });
 
     const getExampleValue = () => {
-        if (examples && selectedExample) {
-            return examples[selectedExample]?.value;
-        }
+        if (examples && selectedExample) return examples[selectedExample]?.value;
+        if (Array.isArray(schemaExamples) && schemaExamples.length > 0) return schemaExamples[schemaExampleIdx];
+        if (example !== undefined) return example;
         return schema?.example || generateExample(schema);
     };
 
@@ -72,13 +84,27 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples }) => {
                             value={selectedExample || undefined}
                             onValueChange={setSelectedExample}
                         >
-                            <SelectTrigger className="w-48">
+                            <SelectTrigger className="w-48 h-7 text-xs">
                                 <SelectValue placeholder="Select example" />
                             </SelectTrigger>
                             <SelectContent>
                                 {Object.keys(examples).map((key) => (
-                                    <SelectItem key={key} value={key}>
-                                        Example {key}
+                                    <SelectItem key={key} value={key} className="text-xs">
+                                        {key}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    )}
+                    {!examples && Array.isArray(schemaExamples) && schemaExamples.length > 1 && (
+                        <Select value={String(schemaExampleIdx)} onValueChange={v => setSchemaExampleIdx(Number(v))}>
+                            <SelectTrigger className="w-[180px] h-7 text-xs">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {schemaExamples.map((_, i) => (
+                                    <SelectItem key={i} value={String(i)} className="text-xs">
+                                        Example {i + 1}
                                     </SelectItem>
                                 ))}
                             </SelectContent>
@@ -91,7 +117,8 @@ const SchemaViewer: React.FC<SchemaViewerProps> = ({ schema, examples }) => {
                         return (
                             <FormattedMarkdown
                                 markdown={typeof val === 'string' ? val : JSON.stringify(val, null, 2)}
-                                languageCode={'json'}
+                                languageCode={contentTypeToLanguage(contentType)}
+                                maxLines={20}
                                 className="[&_code]:!whitespace-pre-wrap p-2 !border !rounded-lg !border-slate-200 dark:!border-slate-700"
                             />
                         );
