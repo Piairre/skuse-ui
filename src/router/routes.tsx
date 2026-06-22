@@ -1,7 +1,8 @@
 import {
     Route,
     RootRoute,
-    Router
+    Router,
+    createHashHistory,
 } from '@tanstack/react-router';
 import Information from '@/components/openapi/Information';
 import { DocumentationShell } from "@/SkuseDocumentation";
@@ -9,7 +10,7 @@ import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import Models from "@/components/openapi/Models";
 import WebhookDetails from "@/components/openapi/WebhookDetails";
 
-export function createAppRouter(openApiUrl: string) {
+export function createAppRouter(openApiUrl: string, routerMode: 'browser' | 'hash' = 'browser') {
     const rootRoute = new RootRoute({
         component: () => <DocumentationShell openApiUrl={openApiUrl} />
     });
@@ -40,5 +41,8 @@ export function createAppRouter(openApiUrl: string) {
 
     const routeTree = rootRoute.addChildren([indexRoute, endpointRoute, modelsRoute, webhookRoute]);
 
-    return new Router({ routeTree });
+    return new Router({
+        routeTree,
+        ...(routerMode === 'hash' ? { history: createHashHistory() } : {}),
+    });
 }
