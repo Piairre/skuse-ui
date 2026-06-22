@@ -248,7 +248,9 @@ export function usePlayground({ method, path, parameters, security, requestBody 
             if (hasBody) headers['Content-Type'] = contentType;
 
             const finalUrl = url.toString();
-            const fetchUrl = `https://proxy.scalar.com?scalar_url=${encodeURIComponent(finalUrl)}`;
+            const isSameOrigin = url.origin === window.location.origin;
+            const isPrivate = ['localhost', '127.0.0.1', '::1'].includes(url.hostname) || url.hostname.startsWith('192.168.') || url.hostname.startsWith('10.') || url.hostname.endsWith('.local');
+            const fetchUrl = (isSameOrigin || isPrivate) ? finalUrl : `https://proxy.scalar.com?scalar_url=${encodeURIComponent(finalUrl)}`;
             const start = performance.now();
             const response = await fetch(fetchUrl, {
                 method,
