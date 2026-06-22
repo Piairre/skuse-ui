@@ -40,6 +40,24 @@ export default defineConfig(({ mode }) => ({
         },
       },
     },
+  } : mode === 'standalone' ? {
+    lib: {
+      entry: resolve(__dirname, 'src/standalone.ts'),
+      name: 'SkuseUI',
+      formats: ['iife'],
+      fileName: () => 'skuse-ui.iife.js',
+    },
+    outDir: 'dist',
+    emptyOutDir: false,
+    cssCodeSplit: false,
+    rollupOptions: {
+      output: {
+        assetFileNames: (info) => {
+          if (info.names?.some(n => n.endsWith('.css'))) return 'style.css';
+          return info.names?.[0] ?? 'asset';
+        },
+      },
+    },
   } : {
     outDir: 'dist-app',
   },

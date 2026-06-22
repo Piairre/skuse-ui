@@ -17,6 +17,8 @@ export interface SkuseDocumentationProps {
     openApiUrl: string;
     /** Default: 'system' */
     theme?: 'light' | 'dark' | 'system';
+    /** Default: 'browser'. Use 'hash' for standalone/embedded usage (no server SPA config needed) */
+    routerMode?: 'browser' | 'hash';
 }
 
 // Internal layout — rendered inside the router context
@@ -100,8 +102,9 @@ export const DocumentationShell: React.FC<{ openApiUrl: string }> = ({ openApiUr
 export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({
     openApiUrl,
     theme = 'system',
+    routerMode = 'browser',
 }) => {
-    const router = useMemo(() => createAppRouter(openApiUrl), [openApiUrl]);
+    const router = useMemo(() => createAppRouter(openApiUrl, routerMode), [openApiUrl, routerMode]);
 
     return (
         <ThemeProvider defaultTheme={theme} storageKey="skuse-ui-theme">

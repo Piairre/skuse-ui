@@ -1,6 +1,6 @@
 {
   "name": "skuse-ui",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A modern, beautiful OpenAPI documentation viewer — fully compatible with OpenAPI 3.0 and 3.1",
   "keywords": ["openapi", "swagger", "api", "documentation", "react", "ui"],
   "license": "MIT",
@@ -19,14 +19,16 @@
       "require": "./dist/skuse-ui.cjs.js",
       "types": "./dist/index.d.ts"
     },
-    "./style.css": "./dist/style.css"
+    "./style.css": "./dist/style.css",
+    "./standalone.js": "./dist/skuse-ui.iife.js"
   },
   "files": [
     "dist"
   ],
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build --mode lib",
+    "build": "tsc -b && vite build --mode lib && vite build --mode standalone",
+    "build:standalone": "vite build --mode standalone",
     "build:app": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview"
