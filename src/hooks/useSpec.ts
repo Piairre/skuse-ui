@@ -62,7 +62,8 @@ export function useSpec({ openApiUrl, updateTitle = false }: { openApiUrl: strin
                         : 'API Docs - Skuse UI';
                 }
 
-                const initialUrl = calculateInitialUrl(resolvedSpec, openApiUrl);
+                const absoluteSpecUrl = new URL(openApiUrl, window.location.href).href;
+                const initialUrl = calculateInitialUrl(resolvedSpec, absoluteSpecUrl);
                 setComputedUrl(initialUrl);
 
                 if (resolvedSpec.servers?.[0]?.variables) {
