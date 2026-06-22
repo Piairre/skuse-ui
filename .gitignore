@@ -45,6 +45,9 @@ logs
 .vscode/
 *.pem
 
+# Local test files
+test-standalone.html
+
 # Temporary files
 *.swp
 *.swo
