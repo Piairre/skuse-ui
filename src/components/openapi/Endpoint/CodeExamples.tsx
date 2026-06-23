@@ -16,7 +16,7 @@ interface CodeExamplesProps {
     path: string;
     requestBody?: string;
     hasRequestBody?: boolean;
-    defaultContentType?: string;
+    contentTypes?: string[];
     security?: Array<Record<string, string[]>>;
     exampleQueryParams?: Record<string, string>;
     exampleHeaderParams?: Array<{ key: string; value: string }>;
@@ -87,7 +87,7 @@ function resolveAuthHeaders(
 }
 
 const CodeExamples: React.FC<CodeExamplesProps> = ({
-    method, path, requestBody, hasRequestBody, defaultContentType,
+    method, path, requestBody, hasRequestBody, contentTypes,
     security, exampleQueryParams, exampleHeaderParams,
 }) => {
     const { computedUrl, credentials, spec, preferredContentType } = useOpenAPIContext();
@@ -112,7 +112,9 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({
                     ? `${computedUrl}${path}?${new URLSearchParams(mergedQuery)}`
                     : `${computedUrl}${path}`;
 
-                const contentType = preferredContentType ?? defaultContentType ?? 'application/json';
+                const contentType = (preferredContentType && contentTypes?.includes(preferredContentType))
+                    ? preferredContentType
+                    : (contentTypes?.[0] ?? 'application/json');
                 const allHeaders: HeaderDef[] = [
                     ...(exampleHeaderParams ?? []),
                     ...authHeaders,
@@ -146,7 +148,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({
         })();
 
         return () => { cancelled = true; };
-    }, [method, path, requestBody, hasRequestBody, selectedLang, computedUrl, credentials, security, spec, preferredContentType, exampleQueryParams, exampleHeaderParams, defaultContentType]);
+    }, [method, path, requestBody, hasRequestBody, selectedLang, computedUrl, credentials, security, spec, preferredContentType, exampleQueryParams, exampleHeaderParams, contentTypes]);
 
     return (
         <div className="space-y-4">
