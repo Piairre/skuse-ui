@@ -4,6 +4,25 @@ import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 import { ParameterObject, RequestBodyObject, SchemaObject } from '@/types/unified-openapi-types';
 import { generateExample } from '@/utils/openapi';
 
+export const isFormType = (ct: string) =>
+    ct === 'multipart/form-data' || ct === 'application/x-www-form-urlencoded';
+
+const getFormFields = (ct: string, requestBody?: RequestBodyObject): Record<string, string> => {
+    if (!requestBody || !isFormType(ct)) return {};
+    const schema = requestBody.content[ct]?.schema as SchemaObject | undefined;
+    if (!schema?.properties) return {};
+    return Object.fromEntries(
+        Object.entries(schema.properties)
+            .filter(([, prop]) => prop.format !== 'binary')
+            .map(([key, prop]) => [
+                key,
+                prop.default !== undefined
+                    ? String(prop.default)
+                    : (Array.isArray(prop.enum) && prop.enum.length > 0 ? String(prop.enum[0]) : ''),
+            ])
+    );
+};
+
 export interface PlaygroundResult {
     status: number;
     statusText: string;
@@ -25,7 +44,7 @@ interface UsePlaygroundOptions {
 const getDefaultParamValue = (p: ParameterObject): string => {
     const schema = p.schema as SchemaObject | undefined;
     if (schema?.default !== undefined) return String(schema.default);
-    if (Array.isArray(schema?.enum) && schema.enum.length === 1) return String(schema.enum[0]);
+    if (Array.isArray(schema?.enum) && schema.enum.length > 0) return String(schema.enum[0]);
     return '';
 };
 
@@ -81,9 +100,16 @@ export function usePlayground({ method, path, parameters, security, requestBody 
     }, [requestBody]);
 
     const [body, setBody] = useState<string>(() => getDefaultBody(contentTypes[0] ?? ''));
+    const [formFields, setFormFields] = useState<Record<string, string>>(() => getFormFields(contentType, requestBody));
+    const [formFiles, setFormFiles] = useState<Record<string, File>>({});
 
     useEffect(() => {
-        setBody(getDefaultBody(contentType));
+        if (isFormType(contentType)) {
+            setFormFields(getFormFields(contentType, requestBody));
+            setFormFiles({});
+        } else {
+            setBody(getDefaultBody(contentType));
+        }
     }, [contentType]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const [enabledParams, setEnabledParams] = useState<Record<string, boolean>>(() =>
@@ -105,6 +131,8 @@ export function usePlayground({ method, path, parameters, security, requestBody 
         setHeaderValues(Object.fromEntries(parameters.filter(p => p.in === 'header').map(p => [p.name, getDefaultParamValue(p)])));
         setEnabledParams(Object.fromEntries(parameters.map(p => [`${p.in}:${p.name}`, true])));
         setBody(getDefaultBody(contentType));
+        setFormFields(getFormFields(contentType, requestBody));
+        setFormFiles({});
         setResult(null);
         setError(null);
         setValidationErrors([]);
@@ -167,15 +195,33 @@ export function usePlayground({ method, path, parameters, security, requestBody 
             if (param && !isEnabled(param)) continue;
             if (val !== '') headers[key] = val;
         }
-        const hasBody = !!requestBody && method !== 'GET' && method !== 'HEAD' && body !== '';
-        if (hasBody) headers['Content-Type'] = contentType;
+        const hasBody = !!requestBody && method !== 'GET' && method !== 'HEAD';
+        if (hasBody && contentType === 'application/x-www-form-urlencoded') headers['Content-Type'] = contentType;
+        else if (hasBody && !isFormType(contentType) && body !== '') headers['Content-Type'] = contentType;
 
         const parts = [`curl -X ${method}`];
         for (const [k, v] of Object.entries(headers)) parts.push(`  -H "${k}: ${v}"`);
-        if (hasBody) parts.push(`  --data-raw '${body.replace(/'/g, "'\\''")}'`);
+        if (hasBody) {
+            if (contentType === 'multipart/form-data') {
+                for (const [k, v] of Object.entries(formFields)) {
+                    if (v !== '') parts.push(`  -F "${k}=${v}"`);
+                }
+                for (const [k, f] of Object.entries(formFiles)) {
+                    parts.push(`  -F "${k}=@${f.name}"`);
+                }
+            } else if (contentType === 'application/x-www-form-urlencoded') {
+                const encoded = Object.entries(formFields)
+                    .filter(([, v]) => v !== '')
+                    .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v)}`)
+                    .join('&');
+                if (encoded) parts.push(`  --data '${encoded}'`);
+            } else if (body !== '') {
+                parts.push(`  --data-raw '${body.replace(/'/g, "'\\''")}'`);
+            }
+        }
         parts.push(`  "${url.toString()}"`);
         return parts.join(' \\\n');
-    }, [method, path, pathValues, queryValues, headerValues, body, contentType, computedUrl, security, credentials, requestBody, enabledParams]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [method, path, pathValues, queryValues, headerValues, body, contentType, computedUrl, security, credentials, requestBody, enabledParams, formFields, formFiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
     const send = useCallback(async () => {
         const missing: string[] = [];
@@ -186,7 +232,16 @@ export function usePlayground({ method, path, parameters, security, requestBody 
             if (p.in === 'query' && !queryValues[p.name]?.trim()) missing.push(`query:${p.name}`);
             if (p.in === 'header' && !headerValues[p.name]?.trim()) missing.push(`header:${p.name}`);
         }
-        if (requestBody?.required && !body.trim()) missing.push('__body__');
+        if (isFormType(contentType) && requestBody) {
+            const schema = requestBody.content[contentType]?.schema as SchemaObject | undefined;
+            for (const field of (schema?.required ?? [])) {
+                const prop = schema?.properties?.[field];
+                const isFile = prop?.format === 'binary';
+                if (isFile ? !formFiles[field] : !formFields[field]?.trim()) missing.push(`form:${field}`);
+            }
+        } else if (requestBody?.required && !body.trim()) {
+            missing.push('__body__');
+        }
         setValidationErrors(missing);
         if (missing.length > 0) {
             toast.error('Fill in required fields before sending.');
@@ -244,8 +299,30 @@ export function usePlayground({ method, path, parameters, security, requestBody 
                 if (val !== '') headers[key] = val;
             }
 
-            const hasBody = !!requestBody && method !== 'GET' && method !== 'HEAD' && body !== '';
-            if (hasBody) headers['Content-Type'] = contentType;
+            let fetchBody: BodyInit | undefined;
+            const hasBody = !!requestBody && method !== 'GET' && method !== 'HEAD';
+            if (hasBody) {
+                if (contentType === 'multipart/form-data') {
+                    const fd = new FormData();
+                    for (const [k, v] of Object.entries(formFields)) {
+                        if (v !== '') fd.append(k, v);
+                    }
+                    for (const [k, f] of Object.entries(formFiles)) {
+                        fd.append(k, f, f.name);
+                    }
+                    fetchBody = fd;
+                } else if (contentType === 'application/x-www-form-urlencoded') {
+                    const params = new URLSearchParams();
+                    for (const [k, v] of Object.entries(formFields)) {
+                        if (v !== '') params.set(k, v);
+                    }
+                    fetchBody = params;
+                    headers['Content-Type'] = 'application/x-www-form-urlencoded';
+                } else if (body !== '') {
+                    headers['Content-Type'] = contentType;
+                    fetchBody = body;
+                }
+            }
 
             const finalUrl = url.toString();
             const fetchUrl = `https://proxy.scalar.com?scalar_url=${encodeURIComponent(finalUrl)}`;
@@ -253,7 +330,7 @@ export function usePlayground({ method, path, parameters, security, requestBody 
             const response = await fetch(fetchUrl, {
                 method,
                 headers,
-                body: hasBody ? body : undefined,
+                body: fetchBody,
                 credentials: needCookies ? 'include' : 'same-origin',
             });
             const duration = Math.round(performance.now() - start);
@@ -280,13 +357,15 @@ export function usePlayground({ method, path, parameters, security, requestBody 
         } finally {
             setLoading(false);
         }
-    }, [method, path, pathValues, queryValues, headerValues, body, contentType, computedUrl, security, credentials, requestBody, enabledParams]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [method, path, pathValues, queryValues, headerValues, body, contentType, computedUrl, security, credentials, requestBody, enabledParams, formFields, formFiles]); // eslint-disable-line react-hooks/exhaustive-deps
 
     return {
         pathValues, setPathValues,
         queryValues, setQueryValues,
         headerValues, setHeaderValues,
         body, setBody,
+        formFields, setFormFields,
+        formFiles, setFormFiles,
         contentType, setContentType: handleSetContentType,
         contentTypes,
         enabledParams,

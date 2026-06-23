@@ -11,6 +11,7 @@ import {
     SchemaObject,
     ExampleObject
 } from "@/types/unified-openapi-types";
+import { isFormType } from '@/hooks/usePlayground';
 import {
     Select,
     SelectContent,
@@ -141,7 +142,7 @@ const RequestBodyViewer: React.FC<RequestBodyViewerProps> = ({ requestBody, hide
                 </div>
             )}
 
-            {content && !hideExample && (
+            {content && !hideExample && !isFormType(activeContentType) && (
                 <div className="space-y-2">
                     <h4 className="text-sm font-medium text-foreground">Example</h4>
                     {content.examples && Object.keys(content.examples).length > 0 && (

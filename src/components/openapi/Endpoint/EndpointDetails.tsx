@@ -232,6 +232,10 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                                 setHeaderValues={playground.setHeaderValues}
                                 body={playground.body}
                                 setBody={playground.setBody}
+                                formFields={playground.formFields}
+                                setFormFields={playground.setFormFields}
+                                formFiles={playground.formFiles}
+                                setFormFiles={playground.setFormFiles}
                                 contentType={playground.contentType}
                                 setContentType={playground.setContentType}
                                 contentTypes={playground.contentTypes}
@@ -319,7 +323,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                                 path={examplePath}
                                 requestBody={exampleBody}
                                 hasRequestBody={!!requestBody}
-                                defaultContentType={requestBody ? Object.keys(requestBody.content)[0] : undefined}
+                                contentTypes={requestBody ? Object.keys(requestBody.content) : undefined}
                                 security={operation.security}
                                 exampleQueryParams={exampleQueryParams}
                                 exampleHeaderParams={exampleHeaderParams}

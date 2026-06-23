@@ -1,13 +1,14 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { WrapText } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { ParameterObject, RequestBodyObject } from '@/types/unified-openapi-types';
+import { ParameterObject, RequestBodyObject, SchemaObject } from '@/types/unified-openapi-types';
 import { getTypeColorClass } from './SchemaBadges';
 import { Switch } from '@/components/ui/switch';
+import { isFormType } from '@/hooks/usePlayground';
 
 const LOCATION_STYLES: Record<string, string> = {
     path: 'border-orange-200 dark:border-orange-800 text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950/40',
@@ -28,6 +29,10 @@ interface PlaygroundFormProps {
     setHeaderValues: SetRecord;
     body: string;
     setBody: (v: string) => void;
+    formFields: Record<string, string>;
+    setFormFields: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    formFiles: Record<string, File>;
+    setFormFiles: React.Dispatch<React.SetStateAction<Record<string, File>>>;
     contentType: string;
     setContentType: (v: string) => void;
     contentTypes: string[];
@@ -92,6 +97,105 @@ const ParamRow: React.FC<{
     </div>
 );
 
+const FormFieldsEditor: React.FC<{
+    contentType: string;
+    requestBody: RequestBodyObject;
+    formFields: Record<string, string>;
+    setFormFields: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+    formFiles: Record<string, File>;
+    setFormFiles: React.Dispatch<React.SetStateAction<Record<string, File>>>;
+    validationErrors: string[];
+}> = ({ contentType, requestBody, formFields, setFormFields, formFiles, setFormFiles, validationErrors }) => {
+    const schema = requestBody.content[contentType]?.schema as SchemaObject | undefined;
+    const properties = schema?.properties ?? {};
+    const required = schema?.required ?? [];
+    const entries = Object.entries(properties);
+    const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+    if (entries.length === 0) {
+        return <p className="text-xs text-muted-foreground italic">No schema properties defined.</p>;
+    }
+
+    return (
+        <div className="space-y-3">
+            {entries.map(([name, prop]) => {
+                const isFile = prop.format === 'binary';
+                const isRequired = required.includes(name);
+                const isInvalid = validationErrors.includes(`form:${name}`);
+                return (
+                    <div key={name} className="space-y-1">
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-medium">
+                                {name}{isRequired && <span className="text-red-500 ml-0.5">*</span>}
+                            </span>
+                            {prop.type && (
+                                <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 font-mono font-normal ${getTypeColorClass(String(prop.type))}`}>
+                                    {isFile ? 'file' : String(prop.type)}
+                                </Badge>
+                            )}
+                            {prop.format && !isFile && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 font-mono font-normal text-muted-foreground">
+                                    {prop.format}
+                                </Badge>
+                            )}
+                        </div>
+                        {isFile ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    ref={el => { fileInputRefs.current[name] = el; }}
+                                    type="file"
+                                    className="hidden"
+                                    onChange={e => {
+                                        const file = e.target.files?.[0];
+                                        if (file) setFormFiles(prev => ({ ...prev, [name]: file }));
+                                    }}
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRefs.current[name]?.click()}
+                                    className={cn(
+                                        'h-7 px-3 text-xs font-mono rounded-md border border-input bg-background hover:bg-muted transition-colors',
+                                        isInvalid && 'border-red-400'
+                                    )}
+                                >
+                                    {formFiles[name] ? formFiles[name].name : 'Choose file…'}
+                                </button>
+                                {formFiles[name] && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormFiles(prev => { const n = { ...prev }; delete n[name]; return n; })}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+                        ) : Array.isArray(prop.enum) && prop.enum.length > 0 ? (
+                            <Select value={formFields[name] ?? ''} onValueChange={v => setFormFields(prev => ({ ...prev, [name]: v }))}>
+                                <SelectTrigger className={cn('h-7 text-xs font-mono w-full', isInvalid && 'border-red-400 focus-visible:ring-red-400')}>
+                                    <SelectValue placeholder={prop.description ?? name} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(prop.enum as unknown[]).map(v => (
+                                        <SelectItem key={String(v)} value={String(v)} className="text-xs font-mono">{String(v)}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input
+                                value={formFields[name] ?? ''}
+                                onChange={e => setFormFields(prev => ({ ...prev, [name]: e.target.value }))}
+                                placeholder={prop.description ?? name}
+                                className={cn('h-7 text-xs font-mono w-full', isInvalid && 'border-red-400 focus-visible:ring-red-400')}
+                            />
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+};
+
 const PlaygroundForm: React.FC<PlaygroundFormProps> = ({
     parameters,
     requestBody,
@@ -99,6 +203,8 @@ const PlaygroundForm: React.FC<PlaygroundFormProps> = ({
     queryValues, setQueryValues,
     headerValues, setHeaderValues,
     body, setBody,
+    formFields, setFormFields,
+    formFiles, setFormFiles,
     contentType, setContentType,
     contentTypes,
     validationErrors,
@@ -187,17 +293,29 @@ const PlaygroundForm: React.FC<PlaygroundFormProps> = ({
                         )}
                     </div>
 
-                    <textarea
-                        value={body}
-                        onChange={e => setBody(e.target.value)}
-                        rows={8}
-                        spellCheck={false}
-                        placeholder='{"key": "value"}'
-                        className={cn(
-                            'w-full text-xs font-mono rounded-md border border-input bg-background px-3 py-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y',
-                            validationErrors.includes('__body__') && 'border-red-400 focus-visible:ring-red-400'
-                        )}
-                    />
+                    {isFormType(contentType) ? (
+                        <FormFieldsEditor
+                            contentType={contentType}
+                            requestBody={requestBody!}
+                            formFields={formFields}
+                            setFormFields={setFormFields}
+                            formFiles={formFiles}
+                            setFormFiles={setFormFiles}
+                            validationErrors={validationErrors}
+                        />
+                    ) : (
+                        <textarea
+                            value={body}
+                            onChange={e => setBody(e.target.value)}
+                            rows={8}
+                            spellCheck={false}
+                            placeholder='{"key": "value"}'
+                            className={cn(
+                                'w-full text-xs font-mono rounded-md border border-input bg-background px-3 py-2 placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring resize-y',
+                                validationErrors.includes('__body__') && 'border-red-400 focus-visible:ring-red-400'
+                            )}
+                        />
+                    )}
                 </div>
             )}
 
