@@ -3,6 +3,7 @@ import { HTTPSnippet } from 'httpsnippet-lite';
 import FormattedMarkdown from "@/components/openapi/FormattedMarkdown";
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 import { AuthCredential, SecuritySchemeObject } from '@/types/unified-openapi-types';
+import { isFormType } from '@/hooks/usePlayground';
 import {
     Select,
     SelectContent,
@@ -11,12 +12,15 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 
+type HarParam = { name: string; value?: string; fileName?: string; contentType?: string };
+
 interface CodeExamplesProps {
     method: string;
     path: string;
     requestBody?: string;
     hasRequestBody?: boolean;
     contentTypes?: string[];
+    formParams?: HarParam[];
     security?: Array<Record<string, string[]>>;
     exampleQueryParams?: Record<string, string>;
     exampleHeaderParams?: Array<{ key: string; value: string }>;
@@ -87,7 +91,7 @@ function resolveAuthHeaders(
 }
 
 const CodeExamples: React.FC<CodeExamplesProps> = ({
-    method, path, requestBody, hasRequestBody, contentTypes,
+    method, path, requestBody, hasRequestBody, contentTypes, formParams,
     security, exampleQueryParams, exampleHeaderParams,
 }) => {
     const { computedUrl, credentials, spec, preferredContentType } = useOpenAPIContext();
@@ -121,6 +125,15 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({
                     ...(hasRequestBody ? [{ key: 'Content-Type', value: contentType }] : []),
                 ];
 
+                const postData = (() => {
+                    if (!hasRequestBody) return undefined;
+                    if (isFormType(contentType) && formParams?.length) {
+                        return { mimeType: contentType, params: formParams };
+                    }
+                    if (requestBody) return { mimeType: contentType, text: requestBody };
+                    return undefined;
+                })();
+
                 const harRequest = {
                     method: method.toUpperCase(),
                     url: urlWithQuery,
@@ -128,9 +141,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({
                     headers: allHeaders.map(h => ({ name: h.key, value: h.value })),
                     queryString: [] as { name: string; value: string }[],
                     cookies: [] as { name: string; value: string }[],
-                    postData: hasRequestBody && requestBody
-                        ? { mimeType: contentType, text: requestBody }
-                        : undefined,
+                    postData,
                     headersSize: 0,
                     bodySize: 0,
                 };
@@ -148,7 +159,7 @@ const CodeExamples: React.FC<CodeExamplesProps> = ({
         })();
 
         return () => { cancelled = true; };
-    }, [method, path, requestBody, hasRequestBody, selectedLang, computedUrl, credentials, security, spec, preferredContentType, exampleQueryParams, exampleHeaderParams, contentTypes]);
+    }, [method, path, requestBody, hasRequestBody, selectedLang, computedUrl, credentials, security, spec, preferredContentType, exampleQueryParams, exampleHeaderParams, contentTypes, formParams]);
 
     return (
         <div className="space-y-4">
