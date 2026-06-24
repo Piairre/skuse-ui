@@ -16,7 +16,7 @@ import RequestBodyViewer from "@/components/openapi/Endpoint/RequestBodyViewer";
 import CallbackViewer from "@/components/openapi/Endpoint/CallbackViewer";
 import PlaygroundForm from './PlaygroundForm';
 import PlaygroundResponse from './PlaygroundResponse';
-import { usePlayground } from '@/hooks/usePlayground';
+import { usePlayground, isFormType } from '@/hooks/usePlayground';
 import { useOpenAPIContext } from '@/hooks/OpenAPIContext';
 
 interface EndpointContentProps {
@@ -96,10 +96,26 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
 
     const exampleBody = useMemo(() => {
         if (!requestBody) return '';
-        const contentType = Object.keys(requestBody.content)[0];
+        const contentType = Object.keys(requestBody.content)[0] ?? '';
+        if (isFormType(contentType)) return '';
         const schema = contentType ? requestBody.content[contentType]?.schema : undefined;
         if (!schema) return '';
         return JSON.stringify(generateExample(schema as SchemaObject), null, 2);
+    }, [requestBody]);
+
+    const exampleFormParams = useMemo(() => {
+        if (!requestBody) return undefined;
+        const contentType = Object.keys(requestBody.content)[0] ?? '';
+        if (!isFormType(contentType)) return undefined;
+        const schema = requestBody.content[contentType]?.schema as SchemaObject | undefined;
+        if (!schema?.properties) return undefined;
+        return Object.entries(schema.properties).map(([name, prop]) => {
+            if (prop.format === 'binary') {
+                return { name, fileName: `${name}.bin`, contentType: 'application/octet-stream' };
+            }
+            const val = generateExample(prop as SchemaObject);
+            return { name, value: val !== null && val !== undefined ? String(val) : '' };
+        });
     }, [requestBody]);
 
     const examplePath = useMemo(() => {
@@ -324,6 +340,7 @@ const EndpointContent: React.FC<EndpointContentProps> = ({ operation }) => {
                                 requestBody={exampleBody}
                                 hasRequestBody={!!requestBody}
                                 contentTypes={requestBody ? Object.keys(requestBody.content) : undefined}
+                                formParams={exampleFormParams}
                                 security={operation.security}
                                 exampleQueryParams={exampleQueryParams}
                                 exampleHeaderParams={exampleHeaderParams}

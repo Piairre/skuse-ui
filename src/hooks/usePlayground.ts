@@ -126,12 +126,16 @@ export function usePlayground({ method, path, parameters, security, requestBody 
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     useEffect(() => {
+        const newCt = (preferredContentType && contentTypes.includes(preferredContentType))
+            ? preferredContentType
+            : (contentTypes[0] ?? 'application/json');
+        setContentType(newCt);
         setPathValues(Object.fromEntries(parameters.filter(p => p.in === 'path').map(p => [p.name, getDefaultParamValue(p)])));
         setQueryValues(Object.fromEntries(parameters.filter(p => p.in === 'query').map(p => [p.name, getDefaultParamValue(p)])));
         setHeaderValues(Object.fromEntries(parameters.filter(p => p.in === 'header').map(p => [p.name, getDefaultParamValue(p)])));
         setEnabledParams(Object.fromEntries(parameters.map(p => [`${p.in}:${p.name}`, true])));
-        setBody(getDefaultBody(contentType));
-        setFormFields(getFormFields(contentType, requestBody));
+        setBody(getDefaultBody(newCt));
+        setFormFields(getFormFields(newCt, requestBody));
         setFormFiles({});
         setResult(null);
         setError(null);
