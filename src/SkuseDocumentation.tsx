@@ -7,7 +7,7 @@ import LayoutSkeleton from '@/components/Skeletons/LayoutSkeleton';
 import { Menu, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { OpenAPIProvider } from '@/hooks/OpenAPIContext';
+import { OpenAPIProvider, useOpenAPIContext } from '@/hooks/OpenAPIContext';
 import { ThemeProvider } from '@/components/theme-provider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { Toaster } from '@/components/ui/sonner';
@@ -22,7 +22,8 @@ export interface SkuseDocumentationProps {
 }
 
 // Internal layout — rendered inside the router context
-export const DocumentationShell: React.FC<{ openApiUrl: string }> = ({ openApiUrl }) => {
+export const DocumentationShell: React.FC = () => {
+    const { openApiUrl } = useOpenAPIContext();
     const { spec, error, loading, retry } = useSpec({ openApiUrl });
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -104,12 +105,12 @@ export const SkuseDocumentation: React.FC<SkuseDocumentationProps> = ({
     theme = 'system',
     routerMode = 'browser',
 }) => {
-    const router = useMemo(() => createAppRouter(openApiUrl, routerMode), [openApiUrl, routerMode]);
+    const router = useMemo(() => createAppRouter(routerMode), [routerMode]);
 
     return (
         <ThemeProvider defaultTheme={theme} storageKey="skuse-ui-theme">
             <TooltipProvider delayDuration={300}>
-                <OpenAPIProvider>
+                <OpenAPIProvider openApiUrl={openApiUrl}>
                     <RouterProvider router={router} />
                     <Toaster richColors closeButton position="bottom-right" />
                 </OpenAPIProvider>
