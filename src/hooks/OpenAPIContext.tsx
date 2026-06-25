@@ -23,6 +23,7 @@ const defaultSpec: UnifiedOpenAPI = {
 };
 
 interface OpenAPIContextType {
+    openApiUrl: string;
     spec: UnifiedOpenAPI;
     setSpec: (spec: UnifiedOpenAPI) => void;
     computedUrl: string;
@@ -41,6 +42,7 @@ interface OpenAPIContextType {
 }
 
 const OpenAPIContext = createContext<OpenAPIContextType>({
+    openApiUrl: '',
     spec: defaultSpec,
     setSpec: () => {},
     computedUrl: '',
@@ -58,7 +60,7 @@ const OpenAPIContext = createContext<OpenAPIContextType>({
     setPreferredContentType: () => {},
 });
 
-export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+export const OpenAPIProvider: React.FC<{ children: ReactNode; openApiUrl: string }> = ({ children, openApiUrl }) => {
     const [spec, setSpec] = useState<UnifiedOpenAPI>(defaultSpec);
     const [computedUrl, setComputedUrl] = useState<string>('');
     const [serverVariables, setServerVariables] = useState<Record<string, string>>({});
@@ -88,6 +90,7 @@ export const OpenAPIProvider: React.FC<{ children: ReactNode }> = ({ children })
     return (
         <OpenAPIContext.Provider
             value={{
+                openApiUrl,
                 spec,
                 setSpec,
                 computedUrl,

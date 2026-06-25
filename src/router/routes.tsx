@@ -10,9 +10,9 @@ import EndpointDetails from "@/components/openapi/Endpoint/EndpointDetails";
 import Models from "@/components/openapi/Models";
 import WebhookDetails from "@/components/openapi/WebhookDetails";
 
-export function createAppRouter(openApiUrl: string, routerMode: 'browser' | 'hash' = 'browser') {
+export function createAppRouter(routerMode: 'browser' | 'hash' = 'browser') {
     const rootRoute = new RootRoute({
-        component: () => <DocumentationShell openApiUrl={openApiUrl} />
+        component: DocumentationShell,
     });
 
     const indexRoute = new Route({
